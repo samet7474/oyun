@@ -1,13 +1,13 @@
 # Oyun Masası
 
-İki kişi kendi telefonundan aynı linki açıp iki oyundan birini oynar: **UNO** ve **Beni ne kadar tanıyorsun**.
+Arkadaşlar kendi telefonundan aynı linki açıp üç oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun** ve **Kelime düellosu**.
 Sunucu kodu yok: her hamle tarayıcıda hesaplanır ve Supabase tablosuna (`oyun_odalari`) yazılır.
 GitHub Pages'te çalışır, derleme gerekmez.
 
 ## Nasıl oynanır
 1. Adını yaz, **Oda kur**'a bas. Oda UNO olarak açılır.
-2. Çıkan linki ya da 4 harfli kodu eşine gönder. O da adını yazıp **Katıl**'a basar.
-3. Ev sahibi lobide oyunu seçer (**UNO** ya da **Beni ne kadar tanıyorsun**), ayarları yapar ve **Oyunu başlat**'a basar.
+2. Çıkan linki ya da 4 harfli kodu arkadaşına gönder. O da adını yazıp **Katıl**'a basar.
+3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** ya da **Kelime düellosu**), ayarları yapar ve **Oyunu başlat**'a basar.
    Oyun yalnız lobide değişir; oyun bitince **Lobiye dön** ile lobiye inilir.
 
 ### UNO
@@ -26,30 +26,49 @@ Sonda **Uyum** yüzdesi (doğru tahmin / (2 x soru sayısı)) ve **Bunları konu
   Sorular bu tarayıcıda (`tanis-sorularim`) saklanır ve lobide odaya iletilir. Açıksa oyuna önce bunlar gelir.
 - **Tekrar oyna** yeni sorular getirir; odada sorulan sorular tekrar sorulmaz (havuz bitince baştan başlar).
 
+### Kelime düellosu
+İki ile dört kişi, Türkçe Wordle. Herkes aynı 5 harfli gizli kelimeyi aynı anda, birbirinden bağımsız bulmaya çalışır (sıra yok).
+- Herkesin 6 hakkı var. Karolar: **yeşil** doğru harf doğru yer, **sarı** kelimede var ama başka yerde, **gri** kelimede yok.
+- Tahtanı ve klavye renklerini sen görürsün. Rakiplerin küçük tahtasında yalnız renkler çıkar, harfleri görünmez;
+  biri bitirince "çözdü ✓ (4. denemede)" ya da "bitti ✗" yazar.
+- Herkes bitince kelime açılır. En az denemede çözen turu alır (eşitlikte hepsi +1, kimse çözemezse puan yok).
+  Herhangi biri **Sonraki kelime**'ye basabilir.
+- Sonda en çok tur kazanan oyunu alır, eşitlikte "Berabere". Ev sahibi **Tekrar oyna** (yeni kelimeler) ya da **Lobiye dön** der.
+- Ayarlar (ev sahibi): tur sayısı 3 / 5 / 7, "Sözlükte olmayan kelime" **Kabul etme** / **Kabul et**.
+  "Kabul etme"de listede olmayan kelime sallanır ve **Yine de kullan** çıkar.
+- Odada çıkan kelime tekrar gelmez (liste bitince baştan başlar). Telefonda ekran klavyesi, bilgisayarda fiziksel klavye çalışır.
+- Kelime listesi `kelimeler.js` içindedir: gizli kelimeler `CEVAPLAR`, kabul edilen kelimeler `GECERLI`.
+
 Aynı tarayıcıdan aynı linke dönersen koltuğuna otursun diye kimliğin tarayıcıda saklanır.
 
 ## Testleri çalıştırma
 ```
 node test/uno-test.js
 node test/tanis-test.js
+node test/kelime-test.js
 ```
 `tanis-test.js` "Beni ne kadar tanıyorsun" motorunu ve oyun yönlendiriciyi (`oyunlar.js`) sınar.
-Hata varsa çıkış kodu 1 olur.
+`kelime-test.js` "Kelime düellosu" motorunu (renklendirme, Türkçe harfler, tur akışı, çakışma) ve yönlendiriciyi sınar;
+kendi küçük kelime listesini kullanır. Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
 - `index.html`: sayfa iskeleti, Supabase betiği
-- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül temayla açılır
+- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç temayla açılır
 - `app.js`: ekranlar, UNO masası, Supabase senkronu
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
+- `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
 - `oyunlar.js`: oyun yönlendirici; hareketi `durum.oyun`'a göre doğru motora verir, oyun seçimini (`oyunSec`) yapar
 - `uno.js`: UNO kuralları (saf motor, DOM ve ağ yok)
 - `tanis.js`: "Beni ne kadar tanıyorsun" kuralları (saf motor, DOM ve ağ yok)
+- `kelime.js`: "Kelime düellosu" kuralları (saf motor, DOM ve ağ yok)
+- `kelimeler.js`: gizli kelimeler (`CEVAPLAR`) ve kabul edilen kelimeler (`GECERLI`)
 - `sorular.js`: hazır soru bankası (kategoriler ve sorular)
 - `config.js`: Supabase adresi ve herkese açık anahtar
 - `test/uno-test.js`: UNO motoru testleri
 - `test/tanis-test.js`: tanış motoru ve yönlendirici testleri
+- `test/kelime-test.js`: kelime düellosu motoru ve yönlendirici testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar
-Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO) ve verilmiş cevaplar (tanış oyunu) okunabilir; ekran başkasının kartını ya da eşinin cevabını cevaplar açılmadan göstermez.
+Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
 Satırın `oyun` sütunu hep `uno` kalır; gerçek oyun `durum.oyun` içindedir (böylece eski odalar ve veritabanı değişmeden çalışır).

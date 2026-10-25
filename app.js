@@ -1,10 +1,12 @@
 // app.js - Ekranlar, çizim ve Supabase senkronu.
-// Oyun kuralları uno.js ve tanis.js içindedir, hareketler oyunlar.js üzerinden geçer;
-// burada sadece göstermek ve eşitlemek var. "Beni ne kadar tanıyorsun" ekranları tanis-ekran.js'te.
+// Oyun kuralları uno.js, tanis.js ve kelime.js içindedir, hareketler oyunlar.js üzerinden geçer;
+// burada sadece göstermek ve eşitlemek var. "Beni ne kadar tanıyorsun" ekranları tanis-ekran.js'te,
+// "Kelime düellosu" ekranları kelime-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { uygula, oyunId, oyunBilinir, OYUNLAR } from './oyunlar.js';
 import { tanisEkraniKur } from './tanis-ekran.js';
+import { kelimeEkraniKur } from './kelime-ekran.js';
 import {
   yeniOda,
   atilabilirlik,
@@ -20,6 +22,9 @@ const BASLIK = 'Oyun Masası';
 
 // I, O, Q yok: karışmasın
 const KOD_HARFLERI = 'ABCDEFGHJKLMNPRSTUVYZ';
+
+// Hamle çakışırsa güncel durumu çekip hamleyi en fazla bu kadar kez yeniden uygularız
+const EN_COK_YENIDEN = 3;
 
 const db = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
@@ -99,6 +104,17 @@ const tanisEkran = tanisEkraniKur({
   ustCubuk: ustCubuk,
   depoOku: depoOku,
   depoYaz: depoYaz,
+});
+
+// "Kelime düellosu" ekranları
+const kelimeEkran = kelimeEkraniKur({
+  el: el,
+  istemci: istemci,
+  hamle: hamle,
+  mesajGoster: mesajGoster,
+  render: render,
+  benimIndeks: benimIndeks,
+  ustCubuk: ustCubuk,
 });
 
 // ---------------------------------------------------------------------------
@@ -292,7 +308,7 @@ async function odayaKatil(kodHam) {
     istemci.kod = kod;
     istemci.durum = satir.durum;
     istemci.surum = satir.surum;
-    const sonuc = await eylemDene({ tip: 'katil', id: istemci.oyuncuId, ad: ad }, true);
+    const sonuc = await eylemDene({ tip: 'katil', id: istemci.oyuncuId, ad: ad });
     if (!sonuc.ok || benimIndeks() < 0) {
       istemci.kod = null;
       istemci.durum = null;
@@ -320,6 +336,7 @@ function odaBaglan(kod, satir) {
   istemci.gorulenEl = new Set();
   istemci.sonAtikId = null;
   tanisEkran.sifirla();
+  kelimeEkran.sifirla();
   try {
     history.replaceState(null, '', '#' + kod);
   } catch (hata) {
@@ -389,11 +406,13 @@ async function yenile() {
   baglantiGuncelle();
 }
 
-// Hareketi uygula ve sunucuya yaz. Çakışma olursa güncel hali çekip bir kez daha dener.
-async function eylemDene(eylem, ilkDeneme) {
+// Hareketi uygula ve sunucuya yaz. Çakışma olursa güncel hali çekip hareketi yeniden uygular
+// (en fazla EN_COK_YENIDEN kez). deneme: 0 ilk deneme, 1.. yeniden uygulamalar.
+// Hareket güncel duruma göre baştan hesaplandığı için başkasının araya yazması onu kaybettirmez.
+async function eylemDene(eylem, deneme = 0) {
   const sonuc = uygula(istemci.durum, eylem);
   if (!sonuc.ok) {
-    if (ilkDeneme || eylem.tip === 'katil') {
+    if (deneme === 0 || eylem.tip === 'katil') {
       mesajGoster(sonuc.hata);
     }
     return { ok: false, hata: sonuc.hata };
@@ -423,10 +442,10 @@ async function eylemDene(eylem, ilkDeneme) {
     kabulEt(yanit.data[0]);
     return { ok: true };
   }
-  // Sıfır satır: biri bizden önce hamle yaptı. Güncel hali al.
+  // Sıfır satır: biri bizden önce hamle yaptı. Güncel hali al ve hareketi yeniden uygula.
   await yenile();
-  if (ilkDeneme) {
-    return eylemDene(eylem, false);
+  if (deneme < EN_COK_YENIDEN) {
+    return eylemDene(eylem, deneme + 1);
   }
   if (eylem.tip !== 'ozelSorular') {
     mesajGoster('Aynı anda hamle yapıldı. Tekrar dene.');
@@ -442,7 +461,7 @@ async function hamle(eylem) {
   }
   istemci.mesgul = true;
   try {
-    return await eylemDene(Object.assign({ id: istemci.oyuncuId }, eylem), true);
+    return await eylemDene(Object.assign({ id: istemci.oyuncuId }, eylem));
   } finally {
     istemci.mesgul = false;
   }
@@ -462,6 +481,7 @@ async function odadanCik() {
   istemci.onKod = '';
   document.title = BASLIK;
   tanisEkran.sifirla();
+  kelimeEkran.sifirla();
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch (hata) {
@@ -510,6 +530,9 @@ function benimSiramMi(d) {
   }
   if (d.oyun === 'tanis') {
     return d.asama === 'cevap' && !d.cevaplar[d.tur][idx];
+  }
+  if (d.oyun === 'kelime') {
+    return false; // sıra yok, herkes aynı anda oynar
   }
   return d.asama === 'oyun' && d.sira === idx;
 }
@@ -842,8 +865,8 @@ function ustCubuk() {
     { class: 'ustcubuk' },
     baglantiGostergesi(),
     el('span', { class: 'kod-kucuk' }, istemci.kod),
-    d && d.oyun !== 'tanis' && d.asama !== 'lobi' && d.ayar.hedef > 0 ? el('span', null, 'Hedef ' + d.ayar.hedef) : null,
-    d && d.oyun !== 'tanis' && d.asama !== 'lobi' && d.ayar.hedef === 0 ? el('span', null, 'Tek el') : null,
+    d && oyunId(d) === 'uno' && d.asama !== 'lobi' && d.ayar.hedef > 0 ? el('span', null, 'Hedef ' + d.ayar.hedef) : null,
+    d && oyunId(d) === 'uno' && d.asama !== 'lobi' && d.ayar.hedef === 0 ? el('span', null, 'Tek el') : null,
     el('span', { class: 'bosluk' }),
     sahipMi && d.asama !== 'lobi'
       ? el(
@@ -851,7 +874,7 @@ function ustCubuk() {
           {
             class: 'link-dugme',
             onclick: () => {
-              if (d.asama === 'bitti' && d.oyun === 'tanis') {
+              if (d.asama === 'bitti' && (d.oyun === 'tanis' || d.oyun === 'kelime')) {
                 hamle({ tip: 'yeniOyun' });
               } else if (window.confirm('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?')) {
                 hamle({ tip: 'yeniOyun' });
@@ -913,6 +936,7 @@ function oyunSecici(d, sahipMi) {
       'button',
       {
         class: 'secenek',
+        'data-oyun': oyun.id,
         'aria-pressed': mevcut === oyun.id ? 'true' : 'false',
         disabled: !sahipMi,
         onclick: () => {
@@ -997,6 +1021,18 @@ function unoLobiBolumu(d, sahipMi) {
   ];
 }
 
+// Seçili oyunun lobi bölümü (ayarlar ve başlat düğmesi)
+function oyunBolumu(d, sahipMi) {
+  const oyun = oyunId(d);
+  if (oyun === 'tanis') {
+    return tanisEkran.lobiBolumu(d, sahipMi);
+  }
+  if (oyun === 'kelime') {
+    return kelimeEkran.lobiBolumu(d, sahipMi);
+  }
+  return unoLobiBolumu(d, sahipMi);
+}
+
 function lobiEkrani() {
   const d = istemci.durum;
   const sahipMi = d.sahip === istemci.oyuncuId;
@@ -1053,7 +1089,7 @@ function lobiEkrani() {
       el('h2', null, tanisMi ? 'Oyuncular (' + d.oyuncular.length + ')' : 'Oyuncular (' + d.oyuncular.length + '/' + MAKS_OYUNCU + ')'),
       el('ul', { class: 'oyuncu-listesi' }, satirlar)
     ),
-    tanisMi ? tanisEkran.lobiBolumu(d, sahipMi) : unoLobiBolumu(d, sahipMi)
+    oyunBolumu(d, sahipMi)
   );
 }
 
@@ -1379,18 +1415,24 @@ function elSonuKatmani(d, ben) {
 // Çizim
 // ---------------------------------------------------------------------------
 
-// Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül
+// Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül, "Kelime düellosu" koyu ardıç
+const TEMA_RENKLERI = {
+  uno: '#0c2f26',
+  tanis: '#241437',
+  kelime: '#0f1c22',
+};
+
 function temaUygula(d) {
-  const tanisMi = Boolean(istemci.kod && d && oyunId(d) === 'tanis');
+  const oyun = istemci.kod && d ? oyunId(d) : 'uno';
   const sayfaKoku = document.documentElement;
-  if (tanisMi) {
-    sayfaKoku.setAttribute('data-tema', 'tanis');
+  if (oyun === 'tanis' || oyun === 'kelime') {
+    sayfaKoku.setAttribute('data-tema', oyun);
   } else {
     sayfaKoku.removeAttribute('data-tema');
   }
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute('content', tanisMi ? '#241437' : '#0c2f26');
+    meta.setAttribute('content', TEMA_RENKLERI[oyun] || TEMA_RENKLERI.uno);
   }
 }
 
@@ -1439,6 +1481,11 @@ function render() {
 
   if (oyunId(d) === 'tanis') {
     kok.append(...tanisEkran.sayfa(d, ben));
+    return;
+  }
+
+  if (oyunId(d) === 'kelime') {
+    kok.append(...kelimeEkran.sayfa(d, ben));
     return;
   }
 

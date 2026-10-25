@@ -1,4 +1,4 @@
-/* Oyun Masası - stiller (UNO ve "Beni ne kadar tanıyorsun"). Önce telefon (360-430px), büyük ekranda ortalanır. */
+/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun" ve "Kelime düellosu"). Önce telefon (360-430px), büyük ekranda ortalanır. */
 
 :root {
   --bg: #0c2f26;
@@ -30,6 +30,25 @@
   --vurgu: #ffb89e;
   --iyi: #5fe0a0;
   --kotu: #ff7f90;
+}
+
+/* "Kelime düellosu" odasında temiz, koyu ardıç masa; klasik yeşil / sarı / gri karolar */
+:root[data-tema='kelime'] {
+  --bg: #0f1c22;
+  --bg-ust: #1b3a3d;
+  --panel: rgba(0, 0, 0, 0.28);
+  --panel-acik: rgba(255, 255, 255, 0.08);
+  --yazi: #eef5f4;
+  --yazi-soluk: #9fbdb9;
+  --vurgu: #5ec8b8;
+  --iyi: #6fd08c;
+  --kotu: #ff7a7a;
+
+  --k-yesil: #538d4e;
+  --k-sari: #b59f3b;
+  --k-gri: #3a3f42;
+  --k-bos-kenar: #4b5a5e;
+  --k-dolu-kenar: #8a9a9d;
 }
 
 * {
@@ -1117,13 +1136,29 @@ button {
 /* Lobi: oyun seçici, konu çipleri, kendi sorularım                    */
 /* ------------------------------------------------------------------ */
 
+.secenekler.oyun-secici {
+  flex-wrap: wrap;
+}
+
 .secenekler.oyun-secici .secenek {
   padding: 6px 8px;
   line-height: 1.2;
 }
 
-.secenekler.oyun-secici .secenek:last-child {
-  flex: 1.7;
+/* İlk satırda UNO ve Kelime düellosu, altta uzun adlı "Beni ne kadar tanıyorsun" */
+.secenekler.oyun-secici .secenek[data-oyun='uno'] {
+  flex: 1 1 30%;
+  order: 1;
+}
+
+.secenekler.oyun-secici .secenek[data-oyun='kelime'] {
+  flex: 1 1 60%;
+  order: 2;
+}
+
+.secenekler.oyun-secici .secenek[data-oyun='tanis'] {
+  flex: 1 1 100%;
+  order: 3;
 }
 
 .cipler {
@@ -1376,7 +1411,8 @@ button {
 }
 
 /* Gönder / Sonraki düğmeleri ekranın altında kalsın */
-.tanis-alt {
+.tanis-alt,
+.kelime-alt {
   position: sticky;
   bottom: 0;
   display: flex;
@@ -1542,6 +1578,480 @@ button {
 }
 
 /* ------------------------------------------------------------------ */
+/* Kelime düellosu                                                     */
+/* ------------------------------------------------------------------ */
+
+:root[data-tema='kelime'] .pano {
+  background: #1f3a3f;
+}
+
+/* body'nin overflow-x: hidden'ı onu kaydırma kabı yapar ve sticky klavyeyi bozar; clip yapmaz */
+:root[data-tema='kelime'] body {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.kelime-sayfa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kelime-sayfa.sonuc {
+  gap: 14px;
+  padding: 6px 16px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.kelime-ust {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 16px;
+  font-weight: 800;
+}
+
+/* Karolar */
+.kt-tahta {
+  --kt: 44px;
+  --aralik: 5px;
+  display: grid;
+  gap: var(--aralik);
+}
+
+.kt-satir {
+  display: grid;
+  grid-template-columns: repeat(5, var(--kt));
+  gap: var(--aralik);
+}
+
+.kt {
+  width: var(--kt);
+  height: var(--kt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--k-bos-kenar);
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  font-size: calc(var(--kt) * 0.55);
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
+}
+
+.kt.dolu {
+  border-color: var(--k-dolu-kenar);
+}
+
+.kt.r0 {
+  --son: var(--k-gri);
+  background: var(--son);
+  border-color: var(--son);
+}
+
+.kt.r1 {
+  --son: var(--k-sari);
+  background: var(--son);
+  border-color: var(--son);
+}
+
+.kt.r2 {
+  --son: var(--k-yesil);
+  background: var(--son);
+  border-color: var(--son);
+}
+
+/* Açılış: karo ortadan yarıya kadar döner, rengi orada değişir */
+.kt.cevir {
+  animation: kt-cevir 0.55s ease backwards;
+  animation-delay: calc(var(--i, 0) * 0.22s);
+}
+
+@keyframes kt-cevir {
+  0% {
+    transform: perspective(300px) rotateX(0);
+    background: transparent;
+    border-color: var(--k-dolu-kenar);
+  }
+  49% {
+    transform: perspective(300px) rotateX(90deg);
+    background: transparent;
+    border-color: var(--k-dolu-kenar);
+  }
+  50% {
+    transform: perspective(300px) rotateX(90deg);
+    background: var(--son);
+    border-color: var(--son);
+  }
+  100% {
+    transform: perspective(300px) rotateX(0);
+    background: var(--son);
+    border-color: var(--son);
+  }
+}
+
+.kt.pop {
+  animation: kt-pop 0.12s ease;
+}
+
+@keyframes kt-pop {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+.kt-satir.sallan {
+  animation: kt-salla 0.45s ease;
+}
+
+@keyframes kt-salla {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(3px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-5px);
+  }
+  40%,
+  60% {
+    transform: translateX(5px);
+  }
+}
+
+/* Rakibin küçük tahtası: yalnız renk */
+.kt-tahta.mini {
+  --kt: var(--mt, 13px);
+  --aralik: 2px;
+}
+
+.kt-tahta.mini .kt {
+  border-width: 1px;
+  border-radius: 2px;
+}
+
+/* Sonuç ekranındaki harfli tahtalar */
+.kt-tahta.orta {
+  --kt: 26px;
+  --aralik: 3px;
+}
+
+.kt-tahta.orta .kt {
+  border-width: 1px;
+  border-radius: 3px;
+}
+
+/* Tur ekranı */
+.kelime-rakipler {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.kelime-rakipler.n1 {
+  --mt: 14px;
+}
+
+.kelime-rakipler.n2 {
+  --mt: 13px;
+}
+
+.kelime-rakipler.n3 {
+  --mt: 12px;
+}
+
+.kelime-rakip {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px;
+  border-radius: 12px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.kelime-rakip .baslik-satiri {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.kelime-rakip .ad {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.kelime-rakip .puan-rozeti {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--panel-acik);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+}
+
+.kelime-rakip .durum {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--yazi-soluk);
+}
+
+.kelime-rakip.cozdu .durum {
+  color: var(--iyi);
+}
+
+/* Karo boyu: genişliğe ve yüksekliğe göre (küçük telefonda 36px'e kadar iner) */
+.kelime-tahta-alani {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 16px;
+}
+
+.kelime-tahta-alani .kt-tahta {
+  --kt: 44px;
+  --kt: clamp(30px, min(calc((100vw - 64px) / 5), calc((100dvh - 440px) / 6)), 58px);
+}
+
+.kelime-mesaj.bilgi {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--yazi-soluk);
+}
+
+.kelime-mesaj {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.kelime-mesaj .link-dugme {
+  min-height: 28px;
+  padding: 4px 6px;
+  color: var(--vurgu);
+  font-size: 15px;
+}
+
+/* Klavye ekranın altında kalsın */
+.kelime-alt-alan {
+  position: sticky;
+  bottom: 0;
+  padding: 8px 6px max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 14%);
+}
+
+.klavye {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.klavye-satir {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.tus {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: #566a6e;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tus.genis {
+  flex: 1.6 1 0;
+  font-size: 13px;
+}
+
+.tus:active {
+  transform: scale(0.95);
+}
+
+.tus.r0 {
+  background: #2a3033;
+  color: #8a9396;
+}
+
+.tus.r1 {
+  background: var(--k-sari);
+}
+
+.tus.r2 {
+  background: var(--k-yesil);
+}
+
+/* Yeni boyanan tuş, karolar dönüp bitince renklenir */
+.tus.gec {
+  animation: tus-gec 0.01s 1.3s backwards;
+}
+
+@keyframes tus-gec {
+  from {
+    background: #566a6e;
+    color: #fff;
+  }
+}
+
+/* Ben bitirdim */
+.kelime-bitirdim {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 10px;
+}
+
+.kelime-bitirdim .baslik {
+  text-align: center;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.kelime-bitirdim .baslik.iyi {
+  color: var(--iyi);
+}
+
+/* Sonuç ekranı */
+.kelime-cevap-alani {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.kelime-cevap {
+  --kt: min(56px, calc((100vw - 64px) / 5));
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.kelime-kazanan {
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.kelime-kartlar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.kelime-sonuc-kart {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.kelime-sonuc-kart.kazanan {
+  outline: 2px solid var(--vurgu);
+}
+
+.kelime-sonuc-kart .ad {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.kelime-sonuc-kart .durum {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+}
+
+.kelime-sonuc-kart .durum.iyi {
+  color: var(--iyi);
+}
+
+.kelime-ozet-listesi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kelime-ozet {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--panel-acik);
+}
+
+.kelime-ozet .kelime {
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.kelime-ozet .denemeler {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.kelime-ozet .deneme {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.kelime-ozet .deneme.kazanan {
+  background: var(--k-yesil);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ */
 /* Büyük ekranlar                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -1560,6 +2070,17 @@ button {
 
   .el-kart {
     margin-left: -30px;
+  }
+}
+
+@media (max-height: 720px) {
+  .kelime-rakipler.n1 {
+    --mt: 12px;
+  }
+
+  .kelime-rakipler.n2,
+  .kelime-rakipler.n3 {
+    --mt: 10px;
   }
 }
 

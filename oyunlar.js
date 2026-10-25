@@ -6,10 +6,12 @@
 
 import * as uno from './uno.js';
 import * as tanis from './tanis.js';
+import * as kelime from './kelime.js';
 
 export const OYUNLAR = [
   { id: 'uno', ad: 'UNO' },
   { id: 'tanis', ad: 'Beni ne kadar tanıyorsun' },
+  { id: 'kelime', ad: 'Kelime düellosu' },
 ];
 
 export function oyunBilinir(id) {
@@ -29,6 +31,9 @@ export function yeniOda(sahipId, sahipAd, oyun = 'uno') {
   if (oyun === 'tanis') {
     return tanis.yeniOda(sahipId, sahipAd);
   }
+  if (oyun === 'kelime') {
+    return kelime.yeniOda(sahipId, sahipAd);
+  }
   return uno.yeniOda(sahipId, sahipAd);
 }
 
@@ -37,6 +42,9 @@ function lobiyiDegistir(durum, oyun) {
   const oyuncular = durum.oyuncular.map((o) => ({ id: o.id, ad: o.ad }));
   if (oyun === 'tanis') {
     return tanis.lobiKur(oyuncular, durum.sahip);
+  }
+  if (oyun === 'kelime') {
+    return kelime.lobiKur(oyuncular, durum.sahip);
   }
   const ilk = oyuncular[0];
   let yeni = uno.yeniOda(ilk.id, ilk.ad);
@@ -76,13 +84,17 @@ function oyunSec(durum, eylem) {
 
 // Tek giriş noktası. Girdi durumu değişmez.
 // banka: yalnız "Beni ne kadar tanıyorsun" için soru bankası (testler küçük bir banka verir).
-export function uygula(durum, eylem, rastgele = Math.random, banka = undefined) {
+// kelimeListesi: yalnız "Kelime düellosu" için { cevaplar, gecerli } (testler küçük bir liste verir).
+export function uygula(durum, eylem, rastgele = Math.random, banka = undefined, kelimeListesi = undefined) {
   if (eylem && eylem.tip === 'oyunSec') {
     return oyunSec(durum, eylem);
   }
   const oyun = oyunId(durum);
   if (oyun === 'tanis') {
     return tanis.uygula(durum, eylem, rastgele, banka);
+  }
+  if (oyun === 'kelime') {
+    return kelime.uygula(durum, eylem, rastgele, kelimeListesi);
   }
   if (oyun === 'uno') {
     return uno.uygula(durum, eylem, rastgele);
