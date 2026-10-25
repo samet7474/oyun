@@ -1,4 +1,4 @@
-/* UNO - stiller. Önce telefon (360-430px), büyük ekranda ortalanır. */
+/* Oyun Masası - stiller (UNO ve "Beni ne kadar tanıyorsun"). Önce telefon (360-430px), büyük ekranda ortalanır. */
 
 :root {
   --bg: #0c2f26;
@@ -17,6 +17,19 @@
   --mavi: #1f6fd1;
 
   --kw: 66px;
+}
+
+/* "Beni ne kadar tanıyorsun" odasında sakin, sıcak bir mor-gül masa */
+:root[data-tema='tanis'] {
+  --bg: #241437;
+  --bg-ust: #4a2352;
+  --panel: rgba(0, 0, 0, 0.26);
+  --panel-acik: rgba(255, 255, 255, 0.09);
+  --yazi: #fbf0f3;
+  --yazi-soluk: #d2b9d4;
+  --vurgu: #ffb89e;
+  --iyi: #5fe0a0;
+  --kotu: #ff7f90;
 }
 
 * {
@@ -190,9 +203,10 @@ button {
   border-radius: 18px;
   background: var(--kirmizi);
   border: 4px solid #fff;
-  font-size: 48px;
+  font-size: 36px;
   font-weight: 900;
   letter-spacing: 0.04em;
+  text-align: center;
   transform: rotate(-4deg);
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
 }
@@ -1097,6 +1111,434 @@ button {
 .toast.goster {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* ------------------------------------------------------------------ */
+/* Lobi: oyun seçici, konu çipleri, kendi sorularım                    */
+/* ------------------------------------------------------------------ */
+
+.secenekler.oyun-secici .secenek {
+  padding: 6px 8px;
+  line-height: 1.2;
+}
+
+.secenekler.oyun-secici .secenek:last-child {
+  flex: 1.7;
+}
+
+.cipler {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cip {
+  min-height: 44px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cip[aria-pressed='true'] {
+  background: var(--vurgu);
+  border-color: var(--vurgu);
+  color: #2b2100;
+}
+
+.cip:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.cip[aria-pressed='true']:disabled {
+  opacity: 1;
+}
+
+.baslik-satiri {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sayfa-basligi {
+  font-size: 26px;
+  text-align: center;
+}
+
+.secenek-satiri {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-dugme.sil {
+  flex: none;
+  width: 44px;
+  min-height: 52px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.kendi-sorular {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kendi-soru {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-acik);
+}
+
+.kendi-soru .metin {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kendi-soru .soru {
+  font-weight: 700;
+}
+
+.kendi-soru .alt-yazi {
+  font-size: 13px;
+  color: var(--yazi-soluk);
+}
+
+.kendi-soru .mini-dugme {
+  flex: none;
+  min-height: 44px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Beni ne kadar tanıyorsun: oyun ekranları                            */
+/* ------------------------------------------------------------------ */
+
+:root[data-tema='tanis'] .pano {
+  background: #3a2250;
+}
+
+.tanis-sayfa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 16px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.tanis-skor {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.tanis-skor .oyuncu {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 6px;
+  border-radius: 14px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.tanis-skor .ad {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--yazi-soluk);
+}
+
+.tanis-skor .sayi {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.tanis-skor .orta {
+  flex: none;
+  align-self: center;
+  padding: 0 2px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--yazi-soluk);
+}
+
+.tanis-skor .orta strong {
+  font-size: 16px;
+  color: var(--yazi);
+}
+
+.tanis-ilerleme {
+  display: flex;
+  gap: 4px;
+}
+
+.tanis-ilerleme span {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.tanis-ilerleme span.biten {
+  background: var(--vurgu);
+}
+
+.tanis-ilerleme span.simdiki {
+  background: var(--yazi);
+}
+
+.tanis-soru {
+  padding: 22px 18px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #fff7f2, #ffe1e8);
+  color: #3a1f33;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.tanis-soru .konu {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a0537a;
+}
+
+.tanis-soru .metin {
+  margin-top: 8px;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.tanis-grup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tanis-grup h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.tanis-grup.kendi h3 {
+  color: var(--vurgu);
+}
+
+.tanis-grup.tahmin h3 {
+  color: #cdbbff;
+}
+
+.tanis-secenekler {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tanis-secenek {
+  min-height: 52px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: var(--panel-acik);
+  font-size: 17px;
+  font-weight: 700;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.tanis-secenek[aria-pressed='true'] {
+  background: var(--vurgu);
+  border-color: var(--vurgu);
+  color: #2b2100;
+}
+
+.tanis-grup.tahmin .tanis-secenek[aria-pressed='true'] {
+  background: #cdbbff;
+  border-color: #cdbbff;
+  color: #1f1238;
+}
+
+/* Gönder / Sonraki düğmeleri ekranın altında kalsın */
+.tanis-alt {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 28%);
+}
+
+.tanis-durum {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+}
+
+.tanis-bekle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--panel);
+  font-weight: 700;
+}
+
+.nokta-nabiz {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--vurgu);
+  animation: nabiz 1.2s ease-in-out infinite;
+}
+
+.tanis-sonuc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--panel);
+}
+
+.tanis-sonuc .baslik {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--vurgu);
+}
+
+.tanis-sonuc .cevap {
+  font-size: 21px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.tanis-tahmin {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: var(--panel-acik);
+}
+
+.tanis-tahmin.dogru {
+  border-color: var(--iyi);
+}
+
+.tanis-tahmin.yanlis {
+  border-color: var(--kotu);
+}
+
+.tanis-tahmin .isaret {
+  flex: none;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.tanis-tahmin.dogru .isaret,
+.tanis-tahmin .artis {
+  color: var(--iyi);
+}
+
+.tanis-tahmin.yanlis .isaret {
+  color: var(--kotu);
+}
+
+.tanis-tahmin .metin {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tanis-tahmin .artis {
+  flex: none;
+  font-weight: 900;
+}
+
+.tanis-not {
+  align-self: center;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.ortala {
+  text-align: center;
+}
+
+.tanis-uyum {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.tanis-uyum .yuzde {
+  font-size: 68px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--vurgu);
+}
+
+.tanis-uyum .uyum-yazi {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.puan-satiri .soluk-yazi {
+  flex: none;
+}
+
+.konusun-listesi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.konusun {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-acik);
+  overflow-wrap: anywhere;
+}
+
+.konusun .soru {
+  font-weight: 800;
+}
+
+.konusun .cevap-satiri {
+  font-size: 15px;
 }
 
 /* ------------------------------------------------------------------ */

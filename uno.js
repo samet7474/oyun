@@ -144,7 +144,7 @@ export function yeniOda(sahipId, sahipAd) {
   };
 }
 
-function temizAd(ad) {
+export function temizAd(ad) {
   let s = String(ad || '').replace(/\s+/g, ' ').trim();
   s = s.slice(0, 12).trim();
   if (s === '') {
@@ -154,7 +154,7 @@ function temizAd(ad) {
 }
 
 // Aynı isimde iki kişi olmasın.
-function benzersizAd(d, ad) {
+export function benzersizAd(d, ad) {
   let aday = ad;
   let n = 2;
   const kucuk = (x) => x.toLocaleLowerCase('tr');

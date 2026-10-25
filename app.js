@@ -1,9 +1,11 @@
 // app.js - Ekranlar, çizim ve Supabase senkronu.
-// Oyun kuralları uno.js içindedir; burada sadece göstermek ve eşitlemek var.
+// Oyun kuralları uno.js ve tanis.js içindedir, hareketler oyunlar.js üzerinden geçer;
+// burada sadece göstermek ve eşitlemek var. "Beni ne kadar tanıyorsun" ekranları tanis-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+import { uygula, oyunId, oyunBilinir, OYUNLAR } from './oyunlar.js';
+import { tanisEkraniKur } from './tanis-ekran.js';
 import {
-  uygula,
   yeniOda,
   atilabilirlik,
   kartSirala,
@@ -14,6 +16,7 @@ import {
 } from './uno.js';
 
 const TABLO = 'oyun_odalari';
+const BASLIK = 'Oyun Masası';
 
 // I, O, Q yok: karışmasın
 const KOD_HARFLERI = 'ABCDEFGHJKLMNPRSTUVYZ';
@@ -84,6 +87,19 @@ const istemci = {
   gorulenEl: new Set(), // yeni gelen kartları animasyonlamak için
   sonAtikId: null,
 };
+
+// "Beni ne kadar tanıyorsun" ekranları. Ortak yardımcıları ona veriyoruz.
+const tanisEkran = tanisEkraniKur({
+  el: el,
+  istemci: istemci,
+  hamle: hamle,
+  mesajGoster: mesajGoster,
+  render: render,
+  benimIndeks: benimIndeks,
+  ustCubuk: ustCubuk,
+  depoOku: depoOku,
+  depoYaz: depoYaz,
+});
 
 // ---------------------------------------------------------------------------
 // Küçük yardımcılar
@@ -212,6 +228,11 @@ function adiAl() {
   return ad;
 }
 
+// Satırdaki oyun bilinen bir oyun mu? (Oyun adı durum.oyun içindedir; eski odalar 'uno'.)
+function odaGecerliMi(satir) {
+  return Boolean(satir.durum) && oyunBilinir(oyunId(satir.durum));
+}
+
 async function odaKur() {
   const ad = adiAl();
   if (!ad || istemci.mesgul) {
@@ -258,7 +279,7 @@ async function odayaKatil(kodHam) {
   istemci.gecis = true;
   try {
     const satir = await satirGetir(kod);
-    if (!satir || satir.oyun !== 'uno') {
+    if (!satir || !odaGecerliMi(satir)) {
       mesajGoster('Böyle bir oda yok.');
       return;
     }
@@ -298,6 +319,7 @@ function odaBaglan(kod, satir) {
   istemci.modal = null;
   istemci.gorulenEl = new Set();
   istemci.sonAtikId = null;
+  tanisEkran.sifirla();
   try {
     history.replaceState(null, '', '#' + kod);
   } catch (hata) {
@@ -406,17 +428,21 @@ async function eylemDene(eylem, ilkDeneme) {
   if (ilkDeneme) {
     return eylemDene(eylem, false);
   }
+  if (eylem.tip !== 'ozelSorular') {
+    mesajGoster('Aynı anda hamle yapıldı. Tekrar dene.');
+  }
   return { ok: false, hata: 'cakisma' };
 }
 
 // Ekrandan gelen her hareket buradan geçer
+// Sonuç: { ok: true } ya da { ok: false, hata }
 async function hamle(eylem) {
   if (istemci.mesgul || !istemci.durum) {
-    return;
+    return { ok: false, hata: 'mesgul' };
   }
   istemci.mesgul = true;
   try {
-    await eylemDene(Object.assign({ id: istemci.oyuncuId }, eylem), true);
+    return await eylemDene(Object.assign({ id: istemci.oyuncuId }, eylem), true);
   } finally {
     istemci.mesgul = false;
   }
@@ -434,7 +460,8 @@ async function odadanCik() {
   istemci.surum = 0;
   istemci.modal = null;
   istemci.onKod = '';
-  document.title = 'UNO';
+  document.title = BASLIK;
+  tanisEkran.sifirla();
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch (hata) {
@@ -472,13 +499,26 @@ function baglantiGostergesi() {
   );
 }
 
+// UNO'da sıra, "Beni ne kadar tanıyorsun"da soru bizi bekliyorsa true
+function benimSiramMi(d) {
+  if (!d) {
+    return false;
+  }
+  const idx = oyuncuIndeks(d, istemci.oyuncuId);
+  if (idx < 0) {
+    return false;
+  }
+  if (d.oyun === 'tanis') {
+    return d.asama === 'cevap' && !d.cevaplar[d.tur][idx];
+  }
+  return d.asama === 'oyun' && d.sira === idx;
+}
+
 // Sıra bize geçince titret ve sekme başlığını değiştir
 function sirabildirimi(eskiDurum, yeniDurum) {
-  const idx = oyuncuIndeks(yeniDurum, istemci.oyuncuId);
-  const benimSiram = yeniDurum.asama === 'oyun' && yeniDurum.sira === idx && idx >= 0;
-  const eskiIdx = eskiDurum ? oyuncuIndeks(eskiDurum, istemci.oyuncuId) : -1;
-  const eskiBenimSiram = Boolean(eskiDurum) && eskiDurum.asama === 'oyun' && eskiDurum.sira === eskiIdx;
-  document.title = benimSiram ? 'Sıra sende - UNO' : 'UNO';
+  const benimSiram = benimSiramMi(yeniDurum);
+  const eskiBenimSiram = benimSiramMi(eskiDurum) && eskiDurum.oyun === yeniDurum.oyun;
+  document.title = benimSiram ? 'Sıra sende - ' + BASLIK : BASLIK;
   if (benimSiram && !eskiBenimSiram) {
     try {
       if (navigator.vibrate) {
@@ -764,7 +804,7 @@ function baslangicEkrani() {
   return el(
     'div',
     { class: 'sayfa' },
-    el('div', { class: 'logo' }, 'UNO'),
+    el('div', { class: 'logo' }, BASLIK),
     el('p', { class: 'slogan' }, 'İki kişi, iki telefon, bir oyun.'),
     davet ? el('p', { class: 'slogan' }, istemci.onKod + ' odasına davet edildin. Adını yaz ve katıl.') : null,
     el(
@@ -802,8 +842,8 @@ function ustCubuk() {
     { class: 'ustcubuk' },
     baglantiGostergesi(),
     el('span', { class: 'kod-kucuk' }, istemci.kod),
-    d && d.asama !== 'lobi' && d.ayar.hedef > 0 ? el('span', null, 'Hedef ' + d.ayar.hedef) : null,
-    d && d.asama !== 'lobi' && d.ayar.hedef === 0 ? el('span', null, 'Tek el') : null,
+    d && d.oyun !== 'tanis' && d.asama !== 'lobi' && d.ayar.hedef > 0 ? el('span', null, 'Hedef ' + d.ayar.hedef) : null,
+    d && d.oyun !== 'tanis' && d.asama !== 'lobi' && d.ayar.hedef === 0 ? el('span', null, 'Tek el') : null,
     el('span', { class: 'bosluk' }),
     sahipMi && d.asama !== 'lobi'
       ? el(
@@ -811,7 +851,9 @@ function ustCubuk() {
           {
             class: 'link-dugme',
             onclick: () => {
-              if (window.confirm('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?')) {
+              if (d.asama === 'bitti' && d.oyun === 'tanis') {
+                hamle({ tip: 'yeniOyun' });
+              } else if (window.confirm('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?')) {
                 hamle({ tip: 'yeniOyun' });
               }
             },
@@ -852,8 +894,8 @@ async function linkiKopyala() {
 async function linkiPaylas() {
   try {
     await navigator.share({
-      title: 'UNO',
-      text: 'UNO oynayalım! Oda kodu: ' + istemci.kod,
+      title: BASLIK,
+      text: 'Oyun oynayalım! Oda kodu: ' + istemci.kod,
       url: odaLinki(),
     });
   } catch (hata) {
@@ -863,32 +905,36 @@ async function linkiPaylas() {
   }
 }
 
-function lobiEkrani() {
-  const d = istemci.durum;
-  const sahipMi = d.sahip === istemci.oyuncuId;
+// Oyun seçici: ev sahibi seçer, diğerleri sadece görür
+function oyunSecici(d, sahipMi) {
+  const mevcut = oyunId(d);
+  const dugmeler = OYUNLAR.map((oyun) =>
+    el(
+      'button',
+      {
+        class: 'secenek',
+        'aria-pressed': mevcut === oyun.id ? 'true' : 'false',
+        disabled: !sahipMi,
+        onclick: () => {
+          if (mevcut !== oyun.id) {
+            hamle({ tip: 'oyunSec', oyun: oyun.id });
+          }
+        },
+      },
+      oyun.ad
+    )
+  );
+  return el(
+    'div',
+    { class: 'kutu' },
+    el('h2', null, 'Oyun'),
+    el('div', { class: 'secenekler oyun-secici' }, dugmeler),
+    sahipMi ? null : el('p', { class: 'soluk-yazi' }, 'Oyunu sadece ev sahibi seçer.')
+  );
+}
 
-  // Oyuncu satırları (4 koltuk)
-  const satirlar = [];
-  for (let i = 0; i < MAKS_OYUNCU; i++) {
-    const o = d.oyuncular[i];
-    if (!o) {
-      satirlar.push(el('li', { class: 'oyuncu-satiri bos-koltuk' }, el('span', { class: 'ad' }, 'Boş yer')));
-      continue;
-    }
-    satirlar.push(
-      el(
-        'li',
-        { class: 'oyuncu-satiri' },
-        el('span', { class: 'ad' }, o.ad),
-        o.id === d.sahip ? el('span', { class: 'etiket-kucuk vurgu' }, 'Ev sahibi') : null,
-        o.id === istemci.oyuncuId ? el('span', { class: 'etiket-kucuk' }, 'Sen') : null,
-        sahipMi && o.id !== istemci.oyuncuId
-          ? el('button', { class: 'mini-dugme', onclick: () => hamle({ tip: 'cikar', hedef: o.id }) }, 'Çıkar')
-          : null
-      )
-    );
-  }
-
+// UNO'ya özel lobi bölümü: ayarlar ve başlat düğmesi
+function unoLobiBolumu(d, sahipMi) {
   const istifAcik = d.ayar.istif;
   const anahtar = el('button', {
     class: 'anahtar',
@@ -917,28 +963,7 @@ function lobiEkrani() {
     )
   );
 
-  const paylasDugmesi = navigator.share
-    ? el('button', { class: 'dugme birincil', onclick: () => linkiPaylas() }, 'Linki paylaş')
-    : null;
-
-  return el(
-    'div',
-    { class: 'sayfa' },
-    el('p', { class: 'slogan' }, 'Oda kodu'),
-    el('div', { class: 'kod-buyuk', onclick: () => linkiKopyala() }, istemci.kod),
-    el('p', { class: 'slogan' }, 'Kodu ya da linki arkadaşına gönder.'),
-    el(
-      'div',
-      { class: 'satir' },
-      paylasDugmesi,
-      el('button', { class: paylasDugmesi ? 'dugme ikincil' : 'dugme birincil', onclick: () => linkiKopyala() }, 'Linki kopyala')
-    ),
-    el(
-      'div',
-      { class: 'kutu' },
-      el('h2', null, 'Oyuncular (' + d.oyuncular.length + '/' + MAKS_OYUNCU + ')'),
-      el('ul', { class: 'oyuncu-listesi' }, satirlar)
-    ),
+  return [
     el(
       'div',
       { class: 'kutu' },
@@ -968,7 +993,67 @@ function lobiEkrani() {
           },
           d.oyuncular.length < 2 ? 'Oyunu başlat (en az 2 kişi)' : 'Oyunu başlat'
         )
-      : el('p', { class: 'slogan' }, 'Ev sahibi oyunu başlatınca oyun açılır.')
+      : el('p', { class: 'slogan' }, 'Ev sahibi oyunu başlatınca oyun açılır.'),
+  ];
+}
+
+function lobiEkrani() {
+  const d = istemci.durum;
+  const sahipMi = d.sahip === istemci.oyuncuId;
+  const tanisMi = oyunId(d) === 'tanis';
+
+  // Kendi sorularımı düzenlediğim ekran
+  if (tanisMi && tanisEkran.sorularimAcikMi()) {
+    return tanisEkran.sorularimEkrani();
+  }
+
+  // Oyuncu satırları (UNO'da 4 koltuk, "Beni ne kadar tanıyorsun"da 2)
+  const koltuk = tanisMi ? Math.max(2, d.oyuncular.length) : MAKS_OYUNCU;
+  const satirlar = [];
+  for (let i = 0; i < koltuk; i++) {
+    const o = d.oyuncular[i];
+    if (!o) {
+      satirlar.push(el('li', { class: 'oyuncu-satiri bos-koltuk' }, el('span', { class: 'ad' }, 'Boş yer')));
+      continue;
+    }
+    satirlar.push(
+      el(
+        'li',
+        { class: 'oyuncu-satiri' },
+        el('span', { class: 'ad' }, o.ad),
+        o.id === d.sahip ? el('span', { class: 'etiket-kucuk vurgu' }, 'Ev sahibi') : null,
+        o.id === istemci.oyuncuId ? el('span', { class: 'etiket-kucuk' }, 'Sen') : null,
+        sahipMi && o.id !== istemci.oyuncuId
+          ? el('button', { class: 'mini-dugme', onclick: () => hamle({ tip: 'cikar', hedef: o.id }) }, 'Çıkar')
+          : null
+      )
+    );
+  }
+
+  const paylasDugmesi = navigator.share
+    ? el('button', { class: 'dugme birincil', onclick: () => linkiPaylas() }, 'Linki paylaş')
+    : null;
+
+  return el(
+    'div',
+    { class: 'sayfa' },
+    el('p', { class: 'slogan' }, 'Oda kodu'),
+    el('div', { class: 'kod-buyuk', onclick: () => linkiKopyala() }, istemci.kod),
+    el('p', { class: 'slogan' }, 'Kodu ya da linki arkadaşına gönder.'),
+    el(
+      'div',
+      { class: 'satir' },
+      paylasDugmesi,
+      el('button', { class: paylasDugmesi ? 'dugme ikincil' : 'dugme birincil', onclick: () => linkiKopyala() }, 'Linki kopyala')
+    ),
+    oyunSecici(d, sahipMi),
+    el(
+      'div',
+      { class: 'kutu' },
+      el('h2', null, tanisMi ? 'Oyuncular (' + d.oyuncular.length + ')' : 'Oyuncular (' + d.oyuncular.length + '/' + MAKS_OYUNCU + ')'),
+      el('ul', { class: 'oyuncu-listesi' }, satirlar)
+    ),
+    tanisMi ? tanisEkran.lobiBolumu(d, sahipMi) : unoLobiBolumu(d, sahipMi)
   );
 }
 
@@ -1294,15 +1379,36 @@ function elSonuKatmani(d, ben) {
 // Çizim
 // ---------------------------------------------------------------------------
 
+// Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül
+function temaUygula(d) {
+  const tanisMi = Boolean(istemci.kod && d && oyunId(d) === 'tanis');
+  const sayfaKoku = document.documentElement;
+  if (tanisMi) {
+    sayfaKoku.setAttribute('data-tema', 'tanis');
+  } else {
+    sayfaKoku.removeAttribute('data-tema');
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', tanisMi ? '#241437' : '#0c2f26');
+  }
+}
+
 function render() {
+  const d = istemci.durum;
+  const ben = benimIndeks();
+
+  // Kendi sorumu yazarken gelen güncelleme yazı kutusunu bozmasın
+  if (istemci.kod && ben >= 0 && tanisEkran.yazimSurerken(d)) {
+    tanisEkran.ozelEsitle();
+    return;
+  }
+
   // El şeridinin kaydırma konumunu koru
   const eskiSerit = kok.querySelector('.el-seridi');
   const kaydirma = eskiSerit ? eskiSerit.scrollLeft : 0;
 
   kok.replaceChildren();
-
-  const d = istemci.durum;
-  const ben = benimIndeks();
 
   // Odada oturmuyorsak başlangıç ekranı
   if (!istemci.kod || !d || ben < 0) {
@@ -1313,12 +1419,26 @@ function render() {
       istemci.durum = null;
       istemci.surum = 0;
     }
+    temaUygula(null);
     kok.append(baslangicEkrani());
     return;
   }
 
+  temaUygula(d);
+
+  // Sorularım ekranı yalnız "Beni ne kadar tanıyorsun" lobisinde açık kalır
+  if (oyunId(d) !== 'tanis' || d.asama !== 'lobi') {
+    tanisEkran.sorularimiKapat();
+  }
+
   if (d.asama === 'lobi') {
     kok.append(ustCubuk(), lobiEkrani());
+    tanisEkran.ozelEsitle();
+    return;
+  }
+
+  if (oyunId(d) === 'tanis') {
+    kok.append(...tanisEkran.sayfa(d, ben));
     return;
   }
 
@@ -1348,7 +1468,7 @@ async function basla() {
       el(
         'div',
         { class: 'sayfa' },
-        el('div', { class: 'logo' }, 'UNO'),
+        el('div', { class: 'logo' }, BASLIK),
         el('p', { class: 'slogan' }, 'Oyun kütüphanesi yüklenemedi. İnterneti kontrol edip sayfayı yenile.')
       )
     );
@@ -1363,7 +1483,7 @@ async function basla() {
   if (kod.length === 4) {
     try {
       const satir = await satirGetir(kod);
-      if (satir && satir.oyun === 'uno' && oyuncuIndeks(satir.durum, istemci.oyuncuId) >= 0) {
+      if (satir && odaGecerliMi(satir) && oyuncuIndeks(satir.durum, istemci.oyuncuId) >= 0) {
         odaBaglan(kod, satir);
       }
     } catch (hata) {
