@@ -1,13 +1,48 @@
 # Oyun Masası
 
-Arkadaşlar kendi telefonundan aynı linki açıp sekiz oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol**, **Gizli Görev**, **Element Düellosu** ve **Risk Kulesi**.
+Arkadaşlar kendi telefonundan aynı linki açıp aynı odada sekiz oyundan birini oynar, oyunlar arasında geçer.
 Sunucu kodu yok: her hamle tarayıcıda hesaplanır ve Supabase tablosuna (`oyun_odalari`) yazılır.
 GitHub Pages'te çalışır, derleme gerekmez.
+
+## Oyunlar
+| Oyun | Kişi | Kısaca |
+| --- | --- | --- |
+| **UNO** | 2-4 | Kartını at, ilk bitiren kazanır. |
+| **Beni ne kadar tanıyorsun** | 2 | Birbirinizin cevaplarını tahmin edin (birlikte oynanır, kazanan yok). |
+| **Kelime düellosu** | 2-4 | Aynı gizli kelimeyi önce kim bulacak? |
+| **Aynı Kafa** | 2-4 | Aynı cevabı yazın, birlikte puan toplayın (kazanan yok). |
+| **Gizli Yol** | 2 | Rakibinin gizli yolunu bul. |
+| **Gizli Görev** | 2-4 | Gizli görevini fark ettirmeden yap. |
+| **Element Düellosu** | 2 | Ateş, su, toprak: kartını gizlice seç. |
+| **Risk Kulesi** | 2-4 | Zar at, kuleni yükselt, yıkılmadan dur. |
+
+Oyunların bilgileri (ad, kişi sayısı, açıklama, simge, renk) `oyunlar.js` içindeki `OYUNLAR` listesindedir; lobideki oyun kartları oradan çizilir.
+
+## Ortak özellikler
+- **Oyun seçici:** lobide her oyun bir kart (simge, ad, kişi sayısı, tek cümlelik açıklama). Seçili oyun belirgindir.
+  Ev sahibi dışındakiler seçimi görür ama değiştiremez. Odadaki kişi sayısı oyuna uymuyorsa kart soluk olur ve nedeni yazar ("2 kişiliktir").
+- **Kim önde:** aynı odada oynanan bütün oyunlarda kim kaç oyun kazandı, oda boyunca tutulur (`durum.genel`) ve lobide gösterilir.
+  Oyun değişince, "Tekrar oyna"da ve "Lobiye dön"de kaybolmaz. Bir oyun bittiği anda kazananı bir kez sayılır; beraberlikte kimseye yazılmaz
+  (yalnız "berabere" sayısı artar). Risk Kulesi'nde rakipler çıkınca kalan kişiye galibiyet yazılmaz. Birlikte oynanan iki oyunda (Beni ne kadar tanıyorsun, Aynı Kafa)
+  kazanan sayılmaz, bunun yerine en iyi uyum rekoru tutulur. Her motorda `kazananlar(durum)` saf yardımcısı vardır; sayım `oyunlar.js` içindeki `genelGuncelle` ile yapılır.
+- **Onay penceresi:** tehlikeli işlerde ("Lobiye dön", "Pes et", "Oyunu bitir", soru silme) tarayıcı penceresi yerine sitenin kendi küçük penceresi (`onay.js`) açılır.
+- **Bağlantı:** sekmeye dönünce ya da ağ gelince oda hemen yenilenir, kanal düştüyse yeniden kurulur (4 saniyelik yedek yoklama de sürer).
+  Bağlantı yokken ekranın altında sakin bir "Bağlantı bekleniyor…" şeridi görünür, bağlantı gelince kaybolur.
+- **Sesler:** üst çubuktaki ses düğmesiyle açılır (varsayılan kapalı, tercih tarayıcıda saklanır). WebAudio ile üretilen kısa, yumuşak sesler (`ses.js`):
+  sıra sana geçti, kazandın. Ses dosyası yoktur. Titreşim, sayfaya ilk dokunuştan önce çağrılmaz.
+
+## Yayın öncesi: sürüm numarasını artır
+GitHub Pages dosyaları kısa süre önbelleğe alır; telefon eski `app.js` ile yeni modülleri karıştırabilir.
+Bunu önlemek için `index.html` içindeki `SURUM` değeri bütün `.js` modüllerine ve `style.css`'e `?v=SURUM` olarak eklenir (bir import haritasıyla, derleme yok).
+**Her yayından önce `index.html` içindeki `const SURUM = '...'` değerini değiştir** (ör. `2026-11-02-a`).
+Yeni bir `.js` dosyası eklersen aynı dosyadaki `DOSYALAR` listesine de ekle (`test/genel-test.js` listede olmayan dosyayı yakalar).
+İlk yüklemede soru, kelime, ipucu ve görev bankaları (yaklaşık 100 KB) de iner: motorlar bankaları doğrudan içe aldığı için bunları oyun seçilince yüklemek
+motorların eşzamanlı çalışmasını bozardı, bu yüzden yapılmadı.
 
 ## Nasıl oynanır
 1. Adını yaz, **Oda kur**'a bas. Oda UNO olarak açılır.
 2. Çıkan linki ya da 4 harfli kodu arkadaşına gönder. O da adını yazıp **Katıl**'a basar.
-3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol**, **Gizli Görev**, **Element Düellosu** ya da **Risk Kulesi**), ayarları yapar ve **Oyunu başlat**'a basar.
+3. Ev sahibi lobide oyun kartlarından birini seçer, ayarları yapar ve **Oyunu başlat**'a basar.
    Oyun yalnız lobide değişir; oyun bitince **Lobiye dön** ile lobiye inilir.
 
 ### UNO
@@ -141,7 +176,10 @@ node test/gizliyol-test.js
 node test/gorev-test.js
 node test/element-test.js
 node test/kule-test.js
+node test/genel-test.js
 ```
+Hepsini bir arada: `for t in test/*.js; do node $t; done`
+`genel-test.js` oyun bilgilerini (`OYUNLAR` alanları, kişi yazısı, sığmama nedeni), "Kim önde" genel skorunu (tek kazanan bir kez sayılır, beraberlik, oyun değişimi ve Lobiye dön'de kalıcılık, birlikte oynanan oyunlar, rakipsiz galibiyet) ve `index.html` sürüm listesinin eksiksizliğini sınar.
 `tanis-test.js` "Beni ne kadar tanıyorsun" motorunu ve oyun yönlendiriciyi (`oyunlar.js`) sınar.
 `kelime-test.js` "Kelime düellosu" motorunu (renklendirme, Türkçe harfler, tur akışı, çakışma) ve yönlendiriciyi sınar;
 kendi küçük kelime listesini kullanır.
@@ -153,9 +191,9 @@ kendi küçük kelime listesini kullanır.
 Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
-- `index.html`: sayfa iskeleti, Supabase betiği
+- `index.html`: sayfa iskeleti, Supabase betiği, sürüm numarası (`SURUM`) ve modül listesi (import haritası)
 - `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın, "Element Düellosu" mürdüm-indigo, "Risk Kulesi" gün batımı tuğlası temayla açılır
-- `app.js`: ekranlar, UNO masası, Supabase senkronu
+- `app.js`: ekranlar, lobi (oyun kartları, Kim önde), UNO masası, Supabase senkronu, bağlantı şeridi
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
 - `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
 - `aynikafa-ekran.js`: "Aynı Kafa" ekranları (lobi ayarları, ipucu ve cevap, açılış kartları, oylar, sonuç)
@@ -163,7 +201,9 @@ Hata varsa çıkış kodu 1 olur.
 - `gorev-ekran.js`: "Gizli Görev" ekranları (lobi ayarları, görev kartları, onay ve yakalama soruları, puan tablosu, geri sayım, sonuç)
 - `element-ekran.js`: "Element Düellosu" ekranları (lobi ayarları, kartlar, masa ve açılış animasyonu, el şeridi, oynananlar şeridi, döngü şeması, sonuç)
 - `kule-ekran.js`: "Risk Kulesi" ekranları (lobi ayarları, kasalar, kule ve zar animasyonu, çatlak taş paneli ve uyarısı, sırayı geç, sonuç)
-- `oyunlar.js`: oyun yönlendirici; hareketi `durum.oyun`'a göre doğru motora verir, oyun seçimini (`oyunSec`) yapar
+- `oyunlar.js`: oyun yönlendirici; oyun bilgileri (`OYUNLAR`), hareketi `durum.oyun`'a göre doğru motora verme, oyun seçimi (`oyunSec`) ve "Kim önde" genel skoru (`genelGuncelle`)
+- `onay.js`: sitenin kendi onay penceresi (`onayIste`)
+- `ses.js`: WebAudio ile kısa sesler, ses aç/kapa tercihi ve güvenli titreşim (`titret`)
 - `uno.js`: UNO kuralları (saf motor, DOM ve ağ yok)
 - `gizliyol.js`: Gizli Yol kuralları (saf motor, DOM ve ağ yok)
 - `tanis.js`: "Beni ne kadar tanıyorsun" kuralları (saf motor, DOM ve ağ yok)
@@ -185,6 +225,7 @@ Hata varsa çıkış kodu 1 olur.
 - `test/gorev-test.js`: Gizli Görev motoru ve yönlendirici testleri
 - `test/element-test.js`: Element Düellosu motoru ve yönlendirici testleri
 - `test/kule-test.js`: Risk Kulesi motoru ve yönlendirici testleri
+- `test/genel-test.js`: oyun bilgileri, Kim önde genel skoru ve sürüm listesi testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar

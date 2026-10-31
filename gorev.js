@@ -731,3 +731,11 @@ export function uygula(durum, eylem, rastgele = Math.random, gorevler = VARSAYIL
   }
   return { ok: true, durum: d };
 }
+
+// Biten oyunun kazananları (indeks listesi). Oyun bitmediyse boş; eşitlikte birden çok indeks gelir.
+export function kazananlar(d) {
+  if (d.asama !== 'bitti' || !d.sonuc) {
+    return [];
+  }
+  return d.sonuc.kazananlar.slice();
+}

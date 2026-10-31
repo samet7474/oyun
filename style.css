@@ -1201,54 +1201,201 @@ button {
 /* Lobi: oyun seçici, konu çipleri, kendi sorularım                    */
 /* ------------------------------------------------------------------ */
 
-.secenekler.oyun-secici {
-  flex-wrap: wrap;
+/* Oyun seçici: iki sütunlu kart ızgarası (8 oyun telefonda rahat sığar) */
+.oyun-izgara {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.secenekler.oyun-secici .secenek {
-  padding: 6px 8px;
+.oyun-kart {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  padding: 12px 10px 10px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-top: 4px solid var(--kart-renk, var(--vurgu));
+  background: rgba(255, 255, 255, 0.05);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.oyun-kart:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.oyun-kart-simge {
+  font-size: 26px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.oyun-kart-ad {
+  font-weight: 800;
+  font-size: 15px;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
-/* İlk satırda UNO ve Kelime düellosu, altta uzun adlı "Beni ne kadar tanıyorsun" */
-.secenekler.oyun-secici .secenek[data-oyun='uno'] {
-  flex: 1 1 30%;
-  order: 1;
+.oyun-kart-kisi {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--kart-renk, var(--vurgu));
 }
 
-.secenekler.oyun-secici .secenek[data-oyun='kelime'] {
-  flex: 1 1 60%;
-  order: 2;
+.oyun-kart-aciklama {
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--yazi-soluk);
 }
 
-.secenekler.oyun-secici .secenek[data-oyun='tanis'] {
-  flex: 1 1 100%;
-  order: 3;
+/* Seçili oyun: dolgulu zemin, kalın çerçeve ve rozet */
+.oyun-kart.secili {
+  border-color: var(--kart-renk, var(--vurgu));
+  border-top-color: var(--kart-renk, var(--vurgu));
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 2px var(--kart-renk, var(--vurgu)), 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
-.secenekler.oyun-secici .secenek[data-oyun='aynikafa'] {
-  flex: 1 1 100%;
-  order: 4;
+.oyun-kart-rozet {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--kart-renk, var(--vurgu));
+  color: #1b1b1b;
+  font-size: 11px;
+  font-weight: 800;
 }
 
-.secenekler.oyun-secici .secenek[data-oyun='gorev'] {
-  flex: 1 1 100%;
-  order: 6;
+/* Ev sahibi olmayan oyuncu seçimi görür ama değiştiremez (soluk yapma, seçili belli kalsın) */
+.oyun-kart:disabled {
+  cursor: default;
+  color: inherit;
 }
 
-.secenekler.oyun-secici .secenek[data-oyun='gizliyol'] {
-  flex: 1 1 100%;
-  order: 5;
+/* Kişi sayısı oyuna uymuyorsa kart soluk, üstünde neden yazar */
+.oyun-kart.uygunsuz {
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.secenekler.oyun-secici .secenek[data-oyun='element'] {
-  flex: 1 1 100%;
-  order: 7;
+.oyun-kart.uygunsuz > *:not(.oyun-kart-neden) {
+  opacity: 0.4;
 }
 
-.secenekler.oyun-secici .secenek[data-oyun='kule'] {
-  flex: 1 1 100%;
-  order: 8;
+.oyun-kart-neden {
+  align-self: stretch;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Kim önde (lobide genel skor)                                        */
+/* ------------------------------------------------------------------ */
+
+.onde-listesi {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.onde-satiri {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.onde-satiri .ad {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.onde-satiri.onde {
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: inset 0 0 0 2px var(--vurgu);
+}
+
+.onde-sayi {
+  margin-left: auto;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+/* ------------------------------------------------------------------ */
+/* Onay penceresi (window.confirm yerine), bağlantı şeridi, ses düğmesi */
+/* ------------------------------------------------------------------ */
+
+.katman.onay-katmani {
+  z-index: 60;
+}
+
+.onay-pano {
+  max-width: 340px;
+}
+
+.onay-yazi {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.baglanti-seridi {
+  position: fixed;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 55;
+  max-width: calc(100vw - 32px);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #f3e7c3;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.baglanti-seridi.goster {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.ses-dugme {
+  text-decoration: none;
+  font-size: 18px;
+  line-height: 1;
+  min-width: 40px;
+  opacity: 0.75;
+}
+
+.ses-dugme.acik {
+  opacity: 1;
 }
 
 .cipler {
@@ -2555,7 +2702,7 @@ button {
   background: rgba(255, 107, 107, 0.16);
 }
 
-/* Tahta: harita ızgarası. Kareler en az 44px, ekrana sığar */
+/* Tahta: harita ızgarası. Kareler ekrana sığacak kadar küçülür (320px'te yaklaşık 42px) */
 .gy-tahta-kutu {
   width: 100%;
   max-width: 420px;
@@ -2575,7 +2722,7 @@ button {
 
 .gy-tahta {
   display: grid;
-  grid-template-columns: repeat(6, minmax(44px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr)); /* dar ekranda (320px) taşmasın: kareler küçülür */
   gap: 4px;
   padding: 6px;
   border-radius: 16px;
@@ -2589,8 +2736,8 @@ button {
 .gy-kare {
   position: relative;
   aspect-ratio: 1;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 0;
+  min-height: 40px;
   padding: 0;
   border-radius: 10px;
   border: 2px solid #2b4a7a;

@@ -6,11 +6,65 @@
     <meta name="theme-color" content="#0c2f26">
     <title>Oyun Masası</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='20' y='6' width='60' height='88' rx='10' fill='%23e0342b' stroke='white' stroke-width='5'/%3E%3Cellipse cx='50' cy='50' rx='20' ry='32' fill='white' transform='rotate(25 50 50)'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="style.css">
+
+    <!--
+      SÜRÜM: yeni sürüm yayınlamadan önce aşağıdaki SURUM değerini artır (README'de anlatılıyor).
+      Bu betik style.css'i ve bütün modülleri "?v=SURUM" ile yükletir; böylece telefon
+      eski bir app.js ile yeni modülleri karıştırmaz. Derleme gerekmez.
+      Yeni bir .js dosyası eklersen aşağıdaki DOSYALAR listesine de ekle (test/genel-test.js kontrol eder).
+    -->
+    <script>
+      const SURUM = '2026-10-31-a';
+      const DOSYALAR = [
+        'app.js',
+        'aynikafa-ekran.js',
+        'aynikafa-ipuclari.js',
+        'aynikafa.js',
+        'config.js',
+        'element-ekran.js',
+        'element.js',
+        'gizliyol-ekran.js',
+        'gizliyol.js',
+        'gorev-ekran.js',
+        'gorev-gorevler.js',
+        'gorev.js',
+        'kelime-ekran.js',
+        'kelime.js',
+        'kelimeler.js',
+        'kule-ekran.js',
+        'kule.js',
+        'onay.js',
+        'oyunlar.js',
+        'ses.js',
+        'sorular.js',
+        'tanis-ekran.js',
+        'tanis.js',
+        'uno.js',
+      ];
+
+      // Stil dosyası
+      const bag = document.createElement('link');
+      bag.rel = 'stylesheet';
+      bag.href = 'style.css?v=' + SURUM;
+      document.head.append(bag);
+
+      // Modül eşlemesi: "./uno.js" -> "./uno.js?v=SURUM". Eski tarayıcılar bunu yok sayar ve sürümsüz yükler.
+      const eslesme = {};
+      for (const ad of DOSYALAR) {
+        eslesme['./' + ad] = './' + ad + '?v=' + SURUM;
+      }
+      const harita = document.createElement('script');
+      harita.type = 'importmap';
+      harita.textContent = JSON.stringify({ imports: eslesme });
+      document.head.append(harita);
+    </script>
   </head>
   <body>
     <!-- Ekranlar app.js tarafından buraya çizilir -->
     <div id="app"></div>
+
+    <!-- Bağlantı koptuysa üstte sakin bir şerit -->
+    <div id="baglanti-seridi" class="baglanti-seridi" role="status" aria-live="polite">Bağlantı bekleniyor…</div>
 
     <!-- Kısa uyarı mesajları -->
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -18,6 +72,8 @@
     <noscript>Bu oyun için JavaScript gerekli.</noscript>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="module">
+      import './app.js';
+    </script>
   </body>
 </html>

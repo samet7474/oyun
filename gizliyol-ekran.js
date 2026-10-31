@@ -5,6 +5,7 @@
 // Gizlilik: rakibin yolu, tur bitene kadar hiçbir yerde çizilmez.
 // Bulma ekranında yalnız benim bulduğum doğru kareler (yolun başı) ve kırmızı işaretler çıkar.
 
+import { onayIste } from './onay.js';
 import {
   ALT_SATIR,
   PES_HATASI,
@@ -496,9 +497,15 @@ export function gizliyolEkraniKur(k) {
               {
                 class: 'dugme ikincil genis',
                 onclick: () => {
-                  if (window.confirm('Pes edersen bu tur ' + PES_HATASI + ' hata sayılır. Emin misin?')) {
-                    hamleGonder({ tip: 'pes', tur: d.tur });
-                  }
+                  onayIste('Pes edersen bu tur ' + PES_HATASI + ' hata sayılır. Emin misin?', {
+                    tamam: 'Pes et',
+                    iptal: 'Devam et',
+                    tehlikeli: true,
+                  }).then((evet) => {
+                    if (evet) {
+                      hamleGonder({ tip: 'pes', tur: d.tur });
+                    }
+                  });
                 },
               },
               'Pes et'

@@ -492,3 +492,11 @@ export function uygula(durum, eylem, rastgele = Math.random, liste = VARSAYILAN_
   }
   return { ok: true, durum: d };
 }
+
+// Biten oyunun kazananları (indeks listesi). Oyun bitmediyse boş; eşitlikte birden çok indeks gelir.
+export function kazananlar(d) {
+  if (d.asama !== 'bitti') {
+    return [];
+  }
+  return oyunKazananlari(d);
+}

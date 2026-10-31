@@ -800,3 +800,11 @@ export function uygula(durum, eylem, rastgele = Math.random) {
   }
   return { ok: true, durum: d };
 }
+
+// Biten oyunun kazananı (indeks listesi). Oyun bitmediyse boş.
+export function kazananlar(d) {
+  if (d.asama !== 'bitti' || d.oyunKazanan === null || d.oyunKazanan === undefined) {
+    return [];
+  }
+  return [d.oyunKazanan];
+}

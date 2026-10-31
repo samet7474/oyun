@@ -6,7 +6,19 @@
 // "Element Düellosu" ekranları element-ekran.js'te, "Risk Kulesi" ekranları kule-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
-import { uygula, oyunId, oyunBilinir, OYUNLAR } from './oyunlar.js';
+import {
+  uygula,
+  oyunId,
+  oyunBilinir,
+  oyunBilgisi,
+  kisiYazisi,
+  sigmamaNedeni,
+  genelVeri,
+  kazananKimlikleri,
+  OYUNLAR,
+} from './oyunlar.js';
+import { onayIste } from './onay.js';
+import { sesAcikMi, sesDegistir, sesCal, titret } from './ses.js';
 import { tanisEkraniKur } from './tanis-ekran.js';
 import { kelimeEkraniKur } from './kelime-ekran.js';
 import { aynikafaEkraniKur } from './aynikafa-ekran.js';
@@ -94,6 +106,8 @@ const istemci = {
   kanal: null,
   kanalHazir: false,
   sonBasari: 0, // son başarılı sunucu cevabı (ms)
+  hata: false, // son sunucu isteği başarısız oldu ya da ağ yok
+  sonAbonelik: 0, // kanalı en son ne zaman kurduk (ms)
   mesgul: false, // bir hareket gönderiliyor
   gecis: false, // odaya katılırken ya da odadan çıkarken true
   modal: null, // { tur: 'renk' | 'blof', kart }
@@ -295,6 +309,7 @@ async function satirGetir(kod) {
     throw yanit.error;
   }
   istemci.sonBasari = Date.now();
+  istemci.hata = false;
   return yanit.data;
 }
 
@@ -424,6 +439,7 @@ function abonelikKapat() {
 
 function abonelikKur() {
   abonelikKapat();
+  istemci.sonAbonelik = Date.now();
   const kod = istemci.kod;
   istemci.kanal = db
     .channel('oda-' + kod + '-' + Date.now())
@@ -456,6 +472,7 @@ function kabulEt(satir) {
   istemci.surum = satir.surum;
   istemci.sonBasari = Date.now();
   sirabildirimi(eskiDurum, satir.durum);
+  oyunSonuSesi(eskiDurum, satir.durum);
   render();
 }
 
@@ -470,6 +487,7 @@ async function yenile() {
     }
   } catch (hata) {
     istemci.sonBasari = 0;
+    istemci.hata = true;
   }
   baglantiGuncelle();
 }
@@ -502,6 +520,7 @@ async function eylemDene(eylem, deneme = 0) {
   }
   if (yanit.error) {
     istemci.sonBasari = 0;
+    istemci.hata = true;
     baglantiGuncelle();
     mesajGoster('Bağlantı sorunu. Tekrar dene.');
     return { ok: false, hata: 'baglanti' };
@@ -571,10 +590,37 @@ async function odadanCik() {
 // ---------------------------------------------------------------------------
 
 function baglantiBagliMi() {
+  if (navigator.onLine === false || istemci.hata) {
+    return false;
+  }
   if (istemci.kanalHazir) {
     return true;
   }
   return Date.now() - istemci.sonBasari < 9000;
+}
+
+// Bağlantı kopuk görününce üstteki şeridi (kısa bir gecikmeyle, titremesin diye) göster
+let seritZamanlayici = null;
+
+function seritGuncelle(bagli) {
+  const serit = document.getElementById('baglanti-seridi');
+  if (!serit) {
+    return;
+  }
+  if (bagli || !istemci.kod) {
+    clearTimeout(seritZamanlayici);
+    seritZamanlayici = null;
+    serit.classList.remove('goster');
+    return;
+  }
+  if (seritZamanlayici === null && !serit.classList.contains('goster')) {
+    seritZamanlayici = setTimeout(() => {
+      seritZamanlayici = null;
+      if (istemci.kod && !baglantiBagliMi()) {
+        serit.classList.add('goster');
+      }
+    }, 1500);
+  }
 }
 
 function baglantiGuncelle() {
@@ -583,6 +629,7 @@ function baglantiGuncelle() {
     oge.querySelector('.nokta').classList.toggle('bagli', bagli);
     oge.querySelector('.yazi').textContent = bagli ? 'bağlı' : 'bağlantı yok';
   });
+  seritGuncelle(bagli);
 }
 
 function baglantiGostergesi() {
@@ -634,13 +681,26 @@ function sirabildirimi(eskiDurum, yeniDurum) {
   const eskiBenimSiram = benimSiramMi(eskiDurum) && eskiDurum.oyun === yeniDurum.oyun;
   document.title = benimSiram ? 'Sıra sende - ' + BASLIK : BASLIK;
   if (benimSiram && !eskiBenimSiram) {
-    try {
-      if (navigator.vibrate) {
-        navigator.vibrate(80);
-      }
-    } catch (hata) {
-      // titreşim yoksa sorun değil
-    }
+    titret(80); // kullanıcı sayfaya dokunana kadar titremez
+    sesCal('sira');
+  }
+}
+
+// Oyun yeni bittiyse ve kazananlardan biri bensem kazanma sesi çal
+function oyunSonuSesi(eskiDurum, yeniDurum) {
+  if (!eskiDurum || !yeniDurum || eskiDurum.asama === 'bitti' || yeniDurum.asama !== 'bitti') {
+    return;
+  }
+  if (oyunId(eskiDurum) !== oyunId(yeniDurum)) {
+    return;
+  }
+  const bilgi = oyunBilgisi(oyunId(yeniDurum));
+  if (bilgi && bilgi.birlikte) {
+    sesCal('kazan'); // birlikte oynanan oyunda herkes kazanır
+    return;
+  }
+  if (kazananKimlikleri(yeniDurum).includes(istemci.oyuncuId)) {
+    sesCal('kazan');
   }
 }
 
@@ -648,22 +708,42 @@ function sirabildirimi(eskiDurum, yeniDurum) {
 setInterval(() => {
   if (istemci.kod && !istemci.kanalHazir) {
     yenile();
+    // Kanal uzun süredir kurulamadıysa baştan kur
+    if (Date.now() - istemci.sonAbonelik > 15000 && db && navigator.onLine !== false) {
+      abonelikKur();
+    }
   } else {
     baglantiGuncelle();
   }
 }, 4000);
 
+// Bağlantıyı hemen toparla: odayı yenile, kanal düştüyse yeniden abone ol
+function baglantiyiToparla() {
+  if (!istemci.kod || !db) {
+    return;
+  }
+  if (!istemci.kanalHazir) {
+    abonelikKur();
+  }
+  yenile();
+}
+
 // Telefon kilidi açılınca ya da sekmeye dönünce hemen güncelle
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && istemci.kod) {
-    yenile();
+  if (!document.hidden) {
+    baglantiyiToparla();
   }
 });
 
 window.addEventListener('online', () => {
-  if (istemci.kod) {
-    yenile();
-  }
+  istemci.hata = false;
+  baglantiyiToparla();
+  baglantiGuncelle();
+});
+
+window.addEventListener('offline', () => {
+  istemci.hata = true;
+  baglantiGuncelle();
 });
 
 window.addEventListener('hashchange', () => {
@@ -967,15 +1047,44 @@ function ustCubuk() {
             onclick: () => {
               if (d.asama === 'bitti' && ['tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule'].includes(d.oyun)) {
                 hamle({ tip: 'yeniOyun' });
-              } else if (window.confirm('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?')) {
-                hamle({ tip: 'yeniOyun' });
+                return;
               }
+              onayIste('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?', {
+                tamam: 'Lobiye dön',
+                iptal: 'Oyuna devam',
+                tehlikeli: true,
+              }).then((evet) => {
+                if (evet) {
+                  hamle({ tip: 'yeniOyun' });
+                }
+              });
             },
           },
           'Lobiye dön'
         )
       : null,
+    sesDugmesi(),
     el('button', { class: 'link-dugme', onclick: () => odadanCik() }, 'Çık')
+  );
+}
+
+// Ses aç/kapa düğmesi (varsayılan kapalı, tercih tarayıcıda saklanır)
+function sesDugmesi() {
+  const acik = sesAcikMi();
+  return el(
+    'button',
+    {
+      class: acik ? 'link-dugme ses-dugme acik' : 'link-dugme ses-dugme',
+      'aria-label': acik ? 'Sesi kapat' : 'Sesi aç',
+      'aria-pressed': acik ? 'true' : 'false',
+      title: acik ? 'Sesi kapat' : 'Sesi aç',
+      onclick: () => {
+        const yeni = sesDegistir();
+        mesajGoster(yeni ? 'Ses açık.' : 'Ses kapalı.');
+        render();
+      },
+    },
+    acik ? '🔊' : '🔇'
   );
 }
 
@@ -1019,32 +1128,103 @@ async function linkiPaylas() {
   }
 }
 
-// Oyun seçici: ev sahibi seçer, diğerleri sadece görür
+// Oyun seçici: oyun kartlarından oluşan ızgara. Ev sahibi seçer, diğerleri sadece görür.
 function oyunSecici(d, sahipMi) {
   const mevcut = oyunId(d);
-  const dugmeler = OYUNLAR.map((oyun) =>
-    el(
+  const kisiSayisi = d.oyuncular.length;
+  const kartlar = OYUNLAR.map((oyun) => {
+    const secili = mevcut === oyun.id;
+    const neden = sigmamaNedeni(oyun, kisiSayisi);
+    const siniflar = ['oyun-kart'];
+    if (secili) {
+      siniflar.push('secili');
+    }
+    if (neden) {
+      siniflar.push('uygunsuz');
+    }
+    return el(
       'button',
       {
-        class: 'secenek',
+        class: siniflar.join(' '),
+        type: 'button',
+        style: '--kart-renk:' + oyun.renk,
         'data-oyun': oyun.id,
-        'aria-pressed': mevcut === oyun.id ? 'true' : 'false',
+        'aria-pressed': secili ? 'true' : 'false',
+        'aria-disabled': neden ? 'true' : null,
+        title: neden || null,
         disabled: !sahipMi,
         onclick: () => {
-          if (mevcut !== oyun.id) {
+          if (neden) {
+            mesajGoster(oyun.ad + ' ' + neden + '. Önce fazla kişileri çıkar.');
+            return;
+          }
+          if (!secili) {
             hamle({ tip: 'oyunSec', oyun: oyun.id });
           }
         },
       },
-      oyun.ad
-    )
-  );
+      el('span', { class: 'oyun-kart-simge', 'aria-hidden': 'true' }, oyun.simge),
+      el('span', { class: 'oyun-kart-ad' }, oyun.ad),
+      el('span', { class: 'oyun-kart-kisi' }, kisiYazisi(oyun)),
+      el('span', { class: 'oyun-kart-aciklama' }, oyun.aciklama),
+      secili ? el('span', { class: 'oyun-kart-rozet' }, 'Seçili') : null,
+      neden ? el('span', { class: 'oyun-kart-neden' }, neden) : null
+    );
+  });
   return el(
     'div',
     { class: 'kutu' },
     el('h2', null, 'Oyun'),
-    el('div', { class: 'secenekler oyun-secici' }, dugmeler),
+    el('div', { class: 'oyun-izgara' }, kartlar),
     sahipMi ? null : el('p', { class: 'soluk-yazi' }, 'Oyunu sadece ev sahibi seçer.')
+  );
+}
+
+// "Kim önde": bu odada oynanan bütün oyunlarda kim kaç oyun kazandı
+function kimOndeTablosu(d) {
+  const g = genelVeri(d);
+  if (g.biten === 0) {
+    return null;
+  }
+  // Odadaki herkes + kazanıp çıkanlar; en çok kazanan üstte
+  const kisiler = new Map();
+  for (const o of d.oyuncular) {
+    kisiler.set(o.id, { ad: o.ad, sayi: 0 });
+  }
+  for (const id of Object.keys(g.kazanim)) {
+    const eski = kisiler.get(id);
+    kisiler.set(id, { ad: eski ? eski.ad : g.kazanim[id].ad, sayi: g.kazanim[id].sayi });
+  }
+  const sirali = Array.from(kisiler.entries())
+    .map((girdi) => ({ id: girdi[0], ad: girdi[1].ad, sayi: girdi[1].sayi }))
+    .sort((a, b) => b.sayi - a.sayi);
+  const enCok = sirali[0].sayi;
+
+  const satirlar = sirali.map((k) => {
+    const onde = enCok > 0 && k.sayi === enCok;
+    return el(
+      'li',
+      { class: onde ? 'onde-satiri onde' : 'onde-satiri' },
+      el('span', { class: 'ad' }, k.id === istemci.oyuncuId ? k.ad + ' (sen)' : k.ad),
+      onde ? el('span', { class: 'onde-taci', 'aria-label': 'önde' }, '👑') : null,
+      el('span', { class: 'onde-sayi' }, String(k.sayi))
+    );
+  });
+
+  const notlar = [];
+  notlar.push(g.biten + ' oyun bitti');
+  if (g.berabere > 0) {
+    notlar.push(g.berabere + ' berabere');
+  }
+  if (g.uyumRekoru) {
+    notlar.push('en iyi uyum %' + g.uyumRekoru.yuzde);
+  }
+  return el(
+    'div',
+    { class: 'kutu kim-onde' },
+    el('h2', null, 'Kim önde'),
+    el('ul', { class: 'onde-listesi' }, satirlar),
+    el('p', { class: 'soluk-yazi' }, notlar.join(' · '))
   );
 }
 
@@ -1190,6 +1370,7 @@ function lobiEkrani() {
       el('button', { class: paylasDugmesi ? 'dugme ikincil' : 'dugme birincil', onclick: () => linkiKopyala() }, 'Linki kopyala')
     ),
     oyunSecici(d, sahipMi),
+    kimOndeTablosu(d),
     el(
       'div',
       { class: 'kutu' },
@@ -1531,16 +1712,10 @@ function elSonuKatmani(d, ben) {
 // Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül, "Kelime düellosu" koyu ardıç,
 // "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın,
 // "Element Düellosu" mürdüm-indigo, "Risk Kulesi" gün batımı tuğlası
-const TEMA_RENKLERI = {
-  uno: '#0c2f26',
-  tanis: '#241437',
-  kelime: '#0f1c22',
-  aynikafa: '#3a1812',
-  gizliyol: '#0a1428',
-  gorev: '#17181d',
-  element: '#1a1040',
-  kule: '#3a1410',
-};
+const TEMA_RENKLERI = {};
+for (const oyun of OYUNLAR) {
+  TEMA_RENKLERI[oyun.id] = oyun.temaRengi;
+}
 
 function temaUygula(d) {
   const oyun = istemci.kod && d ? oyunId(d) : 'uno';

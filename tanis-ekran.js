@@ -2,6 +2,7 @@
 // Oyun kuralları tanis.js içindedir; burada sadece göstermek var.
 // app.js ortak yardımcıları (el, hamle, istemci...) kur() ile verir, böylece bu dosya app.js'i çağırmaz.
 
+import { onayIste } from './onay.js';
 import {
   MAKS_OZEL,
   MAKS_SORU_HARF,
@@ -137,11 +138,12 @@ export function tanisEkraniKur(k) {
   }
 
   function soruSil(id) {
-    if (!window.confirm('Bu soru silinsin mi?')) {
-      return;
-    }
-    sorularimYaz(sorularimOku().filter((q) => q.id !== id));
-    k.render();
+    onayIste('Bu soru silinsin mi?', { tamam: 'Sil', iptal: 'Vazgeç', tehlikeli: true }).then((evet) => {
+      if (evet) {
+        sorularimYaz(sorularimOku().filter((q) => q.id !== id));
+        k.render();
+      }
+    });
   }
 
   function secenekEkle() {

@@ -536,3 +536,8 @@ export function uygula(durum, eylem, rastgele = Math.random, ipuclari = VARSAYIL
   }
   return { ok: true, durum: d };
 }
+
+// Bu oyun birlikte oynanır, kazanan yoktur. Genel skor yalnız uyum rekorunu tutar.
+export function kazananlar(d) {
+  return [];
+}

@@ -5,6 +5,7 @@
 // Gizlilik: ekran yalnız gorev.js'teki ekranVerisi / sonucVerisi yardımcılarından beslenir.
 // Başkasının görevleri oyun bitene kadar hiçbir yerde çizilmez.
 
+import { onayIste } from './onay.js';
 import {
   GOREV_PUANI,
   HEDEFLER,
@@ -433,9 +434,15 @@ export function gorevEkraniKur(k) {
             {
               class: 'dugme ikincil genis gv-bitir',
               onclick: () => {
-                if (window.confirm('Oyun şimdi bitecek ve puanlara göre sonuç çıkacak. Emin misin?')) {
-                  hamleGonder({ tip: 'bitir' });
-                }
+                onayIste('Oyun şimdi bitecek ve puanlara göre sonuç çıkacak. Emin misin?', {
+                  tamam: 'Oyunu bitir',
+                  iptal: 'Vazgeç',
+                  tehlikeli: true,
+                }).then((evet) => {
+                  if (evet) {
+                    hamleGonder({ tip: 'bitir' });
+                  }
+                });
               },
             },
             'Oyunu bitir'

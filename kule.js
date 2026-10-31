@@ -534,3 +534,15 @@ export function uygula(durum, eylem, rastgele = Math.random, simdi = Date.now())
   }
   return { ok: true, durum: d };
 }
+
+// Biten oyunun kazananları (indeks listesi). Rakipler çıkıp kalan tek kişi "kazanır" ama bu sayılmaz.
+export function kazananlar(d) {
+  if (d.asama !== 'bitti' || !d.sonuc || d.sonuc.neden === 'rakipsiz') {
+    return [];
+  }
+  const kazanan = kazananIndeks(d);
+  if (kazanan === null || kazanan === undefined) {
+    return [];
+  }
+  return [kazanan];
+}
