@@ -819,7 +819,7 @@ test('oyun seçimi: Risk Kulesi seçilince oyuncular korunur (2, 3 ve 4 kişi); 
     assert.equal(yeni.oyun, oyunAdi);
     assert.deepEqual(kimlikler(yeni), kimlik);
   }
-  // Gizli Yol ve Element Düellosu 2 kişilik: 3 kişiyle seçilemez
+  // Gizli Yol ve Taş Kağıt Makas 2 kişilik: 3 kişiyle seçilemez
   assert.equal(yonlendir(k, { tip: 'oyunSec', id: pid(0), oyun: 'gizliyol' }).ok, false);
   assert.equal(yonlendir(k, { tip: 'oyunSec', id: pid(0), oyun: 'element' }).ok, false);
 });

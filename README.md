@@ -13,7 +13,7 @@ GitHub Pages'te çalışır, derleme gerekmez.
 | **Aynı Kafa** | 2-4 | Aynı cevabı yazın, birlikte puan toplayın (kazanan yok). |
 | **Gizli Yol** | 2 | Rakibinin gizli yolunu bul. |
 | **Gizli Görev** | 2-4 | Gizli görevini fark ettirmeden yap. |
-| **Element Düellosu** | 2 | Ateş, su, toprak: kartını gizlice seç. |
+| **Taş Kağıt Makas** | 2 | Taş, kağıt, makas: kartını gizlice seç. |
 | **Risk Kulesi** | 2-4 | Zar at, kuleni yükselt, yıkılmadan dur. |
 
 Oyunların bilgileri (ad, kişi sayısı, açıklama, simge, renk) `oyunlar.js` içindeki `OYUNLAR` listesindedir; lobideki oyun kartları oradan çizilir.
@@ -125,25 +125,27 @@ Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6x6 karedir. Herkes gizli 
 - Görev bankası `gorev-gorevler.js` içindedir (124 görev: 40 kolay, 42 orta, 42 zor).
 - Bilinen sınır: görevler oda satırında durur (durum herkese açıktır); ekran başkasının görevini göstermez. Süre her telefonun saatine göre sayılır.
 
-### Element Düellosu
-Tam iki kişi, aynı anda kapalı seçim yapılan kart oyunu. Üç element var: **Ateş**, **Su**, **Toprak**.
-Su ateşi söndürür, ateş toprağı (otları) yakar, toprak suyu emer.
-- **Deste:** her oyuncunun kendi destesi var: her elementten 1-5 değerli birer kart (15 kart) + 3 özel kart = 18 kart. Başta herkes 5 kart çeker.
-- **Özel kartlar:** **Ters Rüzgâr** o tur yenme döngüsünü tersine çevirir (ateş suyu yener vb.); kendisi elementsizdir, bir element kartıyla birlikte oynanır
+### Taş Kağıt Makas
+Tam iki kişi, aynı anda kapalı seçim yapılan kart oyunu. Üç şekil var: **Taş**, **Kağıt**, **Makas**.
+Kağıt taşı sarar, taş makası kırar, makas kağıdı keser. (Oyunun kimliği ve dosya adları eski adından, "element", kalır:
+eski odalar ve "Kim önde" kayıtları bozulmasın diye. Eski Element Düellosu odalarındaki ateş, su, toprak kartları
+sırayla taş, kağıt, makas olarak okunur.)
+- **Deste:** her oyuncunun kendi destesi var: her şekilden 1-5 değerli birer kart (15 kart) + 3 özel kart = 18 kart. Başta herkes 5 kart çeker.
+- **Özel kartlar:** **Ters Rüzgâr** o tur yenme döngüsünü tersine çevirir (taş kağıdı yener, kağıt makası yener, makas taşı yener); kendisi şekilsizdir, bir şekil kartıyla birlikte oynanır
   (iki kart birlikte). İki oyuncu da Ters Rüzgâr oynarsa etkisi kalmaz. **Kalkan** tek başına oynanır: o tur kimse puan almaz, iki kart da atılır.
-  **İkiye Katla** bir element kartıyla birlikte oynanır; o kart kazanırsa puan iki katı olur (kaybederse bir etkisi yok).
+  **İkiye Katla** bir şekil kartıyla birlikte oynanır; o kart kazanırsa puan iki katı olur (kaybederse bir etkisi yok).
   Bir turda en fazla bir özel kart oynanır. Ters Rüzgâr ya da İkiye Katla tek başına oynanamaz.
 - **Tur:** iki oyuncu aynı anda gizlice seçer, **Oyna**'ya basınca seçim kilitlenir (geri alınmaz). Rakip yalnız "seçti" görür.
   İkisi de kilitleyince kartlar animasyonla açılır.
-- **Kazanan:** elementler farklıysa döngüye göre yenen element kazanır. Aynı elementte büyük sayı kazanır, sayılar da eşitse berabere (puan yok).
+- **Kazanan:** şekiller farklıysa döngüye göre yenen şekil kazanır. Aynı şekilde büyük sayı kazanır, sayılar da eşitse berabere (puan yok).
   Kazanan, **kendi kartının sayısı + rakip kartın sayısı** kadar puan alır (İkiye Katla ile iki katı). Berabere ve Kalkan turunda puan yok.
 - Tur sonunda herkes elini 5'e tamamlar (deste bittiyse tamamlamaz). Oynanan kartlar atılır ve iki oyuncunun açılan kartları
   **Oynananlar** şeridinde birikir (kart sayma için). Herhangi biri **Sonraki tur**'a basabilir.
 - **Oyun sonu:** biri hedef puana ulaşınca (ayar: 20 / 30 / 40) ya da iki oyuncunun da oynayabileceği kart kalmayınca.
-  Kartlar biterse çok puanlı kazanır, eşitse berabere. Oynanabilir kart: bir element kartı ya da Kalkan; elinde yalnız
+  Kartlar biterse çok puanlı kazanır, eşitse berabere. Oynanabilir kart: bir şekil kartı ya da Kalkan; elinde yalnız
   Ters Rüzgâr / İkiye Katla kalan oyuncu o tur otomatik "oynayacak kartı yok" sayılır (o turda puan çıkmaz).
-- Ekranda küçük bir "Kim kimi yener?" döngü şeması ve "Nasıl oynanır" kutusu vardır. Kartlar CSS ve inline SVG ile çizilir.
-- Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Element Düellosu seçilemez.
+- Ekranda küçük bir "Kim kimi yener?" döngü şeması (taş, kağıt, makas okları) ve "Nasıl oynanır" kutusu vardır. Kartlar CSS ve inline SVG ile çizilir.
+- Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Taş Kağıt Makas seçilemez.
 - Bilinen sınır: eller ve kilitli seçimler oda satırında durur (durum herkese açıktır); ekran rakibin elini ve kilitli seçimini açılıştan önce çizmez.
 
 ### Risk Kulesi
@@ -186,20 +188,20 @@ kendi küçük kelime listesini kullanır.
 `aynikafa-test.js` "Aynı Kafa" motorunu (Türkçe karşılaştırma, puanlama, aynı sayılsın oyu, uyum, ipucu tekrarı) ve yönlendiriciyi sınar.
 `gizliyol-test.js` "Gizli Yol" motorunu (yol kuralları, doğru ve yanlış adım, başa dönme, kalıcı işaret, pes, tur ve oyun sonu, beraberlik) ve yönlendiriciyi sınar.
 `gorev-test.js` "Gizli Görev" motorunu (dağıtım, onay ve çoğunluk, yakalama, değiştirme hakkı, hedef puan ve süre bitişi, gizlilik yardımcıları) ve yönlendiriciyi sınar.
-`element-test.js` "Element Düellosu" motorunu (deste, dağıtım, yenme döngüsü, özel kartlar ve kombinasyonları, geçersiz seçimler, el tamamlama, hedef puan ve eller boşalınca bitiş, gizlilik yardımcısı) ve yönlendiriciyi sınar.
+`element-test.js` "Taş Kağıt Makas" motorunu (deste, dağıtım, yenme döngüsü, eski ateş/su/toprak anahtarlarının eşlenmesi, özel kartlar ve kombinasyonları, geçersiz seçimler, el tamamlama, hedef puan ve eller boşalınca bitiş, gizlilik yardımcısı) ve yönlendiriciyi sınar.
 `kule-test.js` "Risk Kulesi" motorunu (zar ekleme, 1'de yıkılma, çift kat, dur ve kasa, çatlak taş kuralları, hedefe ulaşma, sıra döngüsü, oyuncu ayrılınca sıra, sırayı geç) ve yönlendiriciyi sınar.
 Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
 - `index.html`: sayfa iskeleti, Supabase betiği, sürüm numarası (`SURUM`) ve modül listesi (import haritası)
-- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın, "Element Düellosu" mürdüm-indigo, "Risk Kulesi" gün batımı tuğlası temayla açılır
+- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın, "Taş Kağıt Makas" koyu deniz yeşili ve sarı, "Risk Kulesi" gün batımı tuğlası temayla açılır
 - `app.js`: ekranlar, lobi (oyun kartları, Kim önde), UNO masası, Supabase senkronu, bağlantı şeridi
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
 - `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
 - `aynikafa-ekran.js`: "Aynı Kafa" ekranları (lobi ayarları, ipucu ve cevap, açılış kartları, oylar, sonuç)
 - `gizliyol-ekran.js`: "Gizli Yol" ekranları (lobi ayarları, yol çizme, bulma tahtası, rakip ilerlemesi, açık yollar, sonuç)
 - `gorev-ekran.js`: "Gizli Görev" ekranları (lobi ayarları, görev kartları, onay ve yakalama soruları, puan tablosu, geri sayım, sonuç)
-- `element-ekran.js`: "Element Düellosu" ekranları (lobi ayarları, kartlar, masa ve açılış animasyonu, el şeridi, oynananlar şeridi, döngü şeması, sonuç)
+- `element-ekran.js`: "Taş Kağıt Makas" ekranları (lobi ayarları, kartlar, masa ve açılış animasyonu, el şeridi, oynananlar şeridi, döngü şeması, sonuç)
 - `kule-ekran.js`: "Risk Kulesi" ekranları (lobi ayarları, kasalar, kule ve zar animasyonu, çatlak taş paneli ve uyarısı, sırayı geç, sonuç)
 - `oyunlar.js`: oyun yönlendirici; oyun bilgileri (`OYUNLAR`), hareketi `durum.oyun`'a göre doğru motora verme, oyun seçimi (`oyunSec`) ve "Kim önde" genel skoru (`genelGuncelle`)
 - `onay.js`: sitenin kendi onay penceresi (`onayIste`)
@@ -209,7 +211,7 @@ Hata varsa çıkış kodu 1 olur.
 - `tanis.js`: "Beni ne kadar tanıyorsun" kuralları (saf motor, DOM ve ağ yok)
 - `gorev.js`: Gizli Görev kuralları (saf motor, DOM ve ağ yok)
 - `gorev-gorevler.js`: Gizli Görev görev bankası
-- `element.js`: Element Düellosu kuralları (saf motor, DOM ve ağ yok)
+- `element.js`: Taş Kağıt Makas kuralları (saf motor, DOM ve ağ yok)
 - `kule.js`: Risk Kulesi kuralları (saf motor, DOM ve ağ yok)
 - `kelime.js`: "Kelime düellosu" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa.js`: "Aynı Kafa" kuralları (saf motor, DOM ve ağ yok)
@@ -223,11 +225,11 @@ Hata varsa çıkış kodu 1 olur.
 - `test/aynikafa-test.js`: Aynı Kafa motoru ve yönlendirici testleri
 - `test/gizliyol-test.js`: Gizli Yol motoru ve yönlendirici testleri
 - `test/gorev-test.js`: Gizli Görev motoru ve yönlendirici testleri
-- `test/element-test.js`: Element Düellosu motoru ve yönlendirici testleri
+- `test/element-test.js`: Taş Kağıt Makas motoru ve yönlendirici testleri
 - `test/kule-test.js`: Risk Kulesi motoru ve yönlendirici testleri
 - `test/genel-test.js`: oyun bilgileri, Kim önde genel skoru ve sürüm listesi testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar
-Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa), rakibin yolu (Gizli Yol), rakibin eli ve kilitli seçimi (Element Düellosu) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
+Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa), rakibin yolu (Gizli Yol), rakibin eli ve kilitli seçimi (Taş Kağıt Makas) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
 Satırın `oyun` sütunu hep `uno` kalır; gerçek oyun `durum.oyun` içindedir (böylece eski odalar ve veritabanı değişmeden çalışır).

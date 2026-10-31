@@ -3,7 +3,7 @@
 // burada sadece göstermek ve eşitlemek var. "Beni ne kadar tanıyorsun" ekranları tanis-ekran.js'te,
 // "Kelime düellosu" ekranları kelime-ekran.js'te, "Aynı Kafa" ekranları aynikafa-ekran.js'te,
 // "Gizli Yol" ekranları gizliyol-ekran.js'te, "Gizli Görev" ekranları gorev-ekran.js'te,
-// "Element Düellosu" ekranları element-ekran.js'te, "Risk Kulesi" ekranları kule-ekran.js'te.
+// "Taş Kağıt Makas" ekranları element-ekran.js'te, "Risk Kulesi" ekranları kule-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import {
@@ -172,7 +172,7 @@ const gorevEkran = gorevEkraniKur({
   ustCubuk: ustCubuk,
 });
 
-// "Element Düellosu" ekranları
+// "Taş Kağıt Makas" ekranları
 const elementEkran = elementEkraniKur({
   el: el,
   istemci: istemci,
@@ -1711,7 +1711,7 @@ function elSonuKatmani(d, ben) {
 
 // Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül, "Kelime düellosu" koyu ardıç,
 // "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın,
-// "Element Düellosu" mürdüm-indigo, "Risk Kulesi" gün batımı tuğlası
+// "Taş Kağıt Makas" koyu deniz yeşili, "Risk Kulesi" gün batımı tuğlası
 const TEMA_RENKLERI = {};
 for (const oyun of OYUNLAR) {
   TEMA_RENKLERI[oyun.id] = oyun.temaRengi;

@@ -87,13 +87,13 @@ export const OYUNLAR = [
   },
   {
     id: 'element',
-    ad: 'Element Düellosu',
+    ad: 'Taş Kağıt Makas',
     enAz: 2,
     enCok: 2,
-    aciklama: 'Ateş, su, toprak: kartını gizlice seç.',
-    simge: '🔥',
-    renk: '#c9a2ff',
-    temaRengi: '#1a1040',
+    aciklama: 'Taş, kağıt, makas: kartını gizlice seç.',
+    simge: '✊',
+    renk: '#ffd45e',
+    temaRengi: '#0f3a4a',
     sinirli: true,
   },
   {

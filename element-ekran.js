@@ -1,4 +1,4 @@
-// element-ekran.js - "Element Düellosu" ekranları.
+// element-ekran.js - "Taş Kağıt Makas" ekranları (dosya adı eski kalır, oyun kimliği hâlâ "element").
 // Oyun kuralları element.js içindedir; burada sadece göstermek var.
 // app.js ortak yardımcıları (el, hamle, istemci...) kur() ile verir, böylece bu dosya app.js'i çağırmaz.
 //
@@ -9,6 +9,7 @@ import {
   HEDEFLER,
   OYUNCU_SAYISI,
   OZEL_ADLARI,
+  durumuYenile,
   gorunum,
   kartBilgi,
   oyunKazananlari,
@@ -21,45 +22,45 @@ const NASIL_OYNANIR = [
   'İkinizin de kendi 18 kartlık destesi var. Başta 5 kart çekersiniz.',
   'Her turda ikiniz de aynı anda gizlice kart seçersiniz. "Oyna"ya basınca seçimin kilitlenir. Rakip yalnız seçtiğini görür.',
   'İkiniz de seçince kartlar açılır.',
-  'Su ateşi söndürür, ateş toprağı yakar, toprak suyu emer. Yenen element turu kazanır.',
-  'Aynı elementte büyük sayı kazanır. Sayılar da aynıysa berabere kalırsınız.',
+  'Kağıt taşı sarar, taş makası kırar, makas kağıdı keser. Yenen şekil turu kazanır.',
+  'Aynı şekilde büyük sayı kazanır. Sayılar da aynıysa berabere kalırsınız.',
   'Kazanan, kendi kartının sayısıyla rakip kartın sayısını toplar ve o kadar puan alır.',
-  'Ters Rüzgâr: o tur kimin kimi yeneceği tersine döner. Bir element kartıyla birlikte oynanır. İkiniz de oynarsanız etkisi kalmaz.',
+  'Ters Rüzgâr: o tur kural tersine döner. Taş kağıdı yener, kağıt makası yener, makas taşı yener. Bir şekil kartıyla birlikte oynanır. İkiniz de oynarsanız etkisi kalmaz.',
   'Kalkan: tek başına oynanır. O tur kimse puan almaz.',
-  'İkiye Katla: bir element kartıyla birlikte oynanır. O kart kazanırsa puan iki katı olur.',
+  'İkiye Katla: bir şekil kartıyla birlikte oynanır. O kart kazanırsa puan iki katı olur.',
   'Bir turda en fazla bir özel kart oynanır. Tur bitince elin yine 5 karta tamamlanır.',
   'Hedef puana önce ulaşan kazanır. Kartlar biterse çok puanı olan kazanır.',
   'Oynananlar şeridinde çıkan kartları görürsün. Hangi kartların kaldığını bu şekilde takip edebilirsin.',
 ];
 
-// Yenme cümleleri (normal düzen)
+// Yenme cümleleri (normal düzen), anahtar kazanan şekildir
 const YENME_CUMLESI = {
-  su: 'Su ateşi söndürür.',
-  ates: 'Ateş toprağı yakar.',
-  toprak: 'Toprak suyu emer.',
+  kagit: 'Kağıt taşı sardı!',
+  tas: 'Taş makası kırdı!',
+  makas: 'Makas kağıdı kesti!',
 };
 
-// Tersine dönünce kullanılan cümleler (kazanan element, yenilen element)
+// Tersine dönünce kullanılan cümleler (kazanan şekil, yenilen şekil)
 const BELIRTME_HALI = {
-  ates: 'ateşi',
-  su: 'suyu',
-  toprak: 'toprağı',
+  tas: 'taşı',
+  kagit: 'kağıdı',
+  makas: 'makası',
 };
 
 const KUCUK_AD = {
-  ates: 'Ateş',
-  su: 'Su',
-  toprak: 'Toprak',
+  tas: 'Taş',
+  kagit: 'Kağıt',
+  makas: 'Makas',
 };
 
 // Kart ve döngü şeması simgeleri: 24x24 alanda iç çizimler (resim dosyası yok)
 const SIMGELER = {
-  ates:
-    '<path d="M12 2.2c.3 4.2 5.4 6.2 5.4 11.6a5.4 5.4 0 0 1-10.8 0c0-2.6 1.3-4.2 2.7-5.4.3 1.9 1.1 2.9 2.2 3 .2-3.2-.8-6.2.5-9.2z" fill="currentColor"/><path d="M12 21.6a2.6 2.6 0 0 1-2.6-2.6c0-1.6 1.4-2.4 2.6-4 1.2 1.6 2.6 2.4 2.6 4a2.6 2.6 0 0 1-2.6 2.6z" fill="#ffe08a"/>',
-  su:
-    '<path d="M12 2.4c0 0-6.6 7.4-6.6 12.2a6.6 6.6 0 0 0 13.2 0C18.6 9.8 12 2.4 12 2.4z" fill="currentColor"/><path d="M8.6 14.6a3.6 3.6 0 0 0 3 3.5" fill="none" stroke="#d8f6ff" stroke-width="1.6" stroke-linecap="round"/>',
-  toprak:
-    '<path d="M1.8 20.5 9 6.8l4 7.2 2.4-3.6 6.8 10.1z" fill="currentColor"/><path d="M9 6.8l1.8 3.2-1.8-.9-1.9.9z" fill="#f4ffe8"/><path d="M15.2 4.6c1.6.1 2.9 1.2 3.2 2.8-1.6.1-3-1-3.2-2.8z" fill="#bff2a2"/>',
+  tas:
+    '<path d="M3.2 15.4C2.6 10.6 6 5.4 11 4.6c4.6-.7 9.2 1.6 10 6.2.7 4-1.6 8.4-6.6 8.9-4.2.4-10.7.6-11.2-4.3z" fill="currentColor"/><path d="M7.4 9.2c1.2-1.8 3.2-2.8 5.2-2.7" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.7" stroke-linecap="round"/><path d="M14.6 13.6l2.6 1.8M10.2 15.8l-1 2.4" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.4" stroke-linecap="round"/>',
+  kagit:
+    '<path d="M5 2.6h9.6L19.4 7.4V21.4H5z" fill="currentColor"/><path d="M14.6 2.6v4.8h4.8z" fill="rgba(0,0,0,0.2)"/><path d="M8 11.4h8M8 14.4h8M8 17.4h5" fill="none" stroke="rgba(30,50,90,0.55)" stroke-width="1.5" stroke-linecap="round"/>',
+  makas:
+    '<path d="M9.8 12.4 18.8 3M14.2 12.4 5.2 3" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="7.4" cy="18.2" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="16.6" cy="18.2" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M9.6 15.8 12 12.4l2.4 3.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
   ters:
     '<path d="M18.6 8.2A7.6 7.6 0 0 0 5.2 9.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M5.4 15.8a7.6 7.6 0 0 0 13.4-1.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 3.8v5.6h-5.6z" fill="currentColor"/><path d="M4 20.2v-5.6h5.6z" fill="currentColor"/>',
   kalkan:
@@ -148,8 +149,8 @@ export function elementEkraniKur(k) {
   // -------------------------------------------------------------------------
 
   function kartAdiKisa(bilgi) {
-    if (bilgi.tip === 'element') {
-      return KUCUK_AD[bilgi.element];
+    if (bilgi.tip === 'sekil') {
+      return KUCUK_AD[bilgi.sekil];
     }
     return OZEL_ADLARI[bilgi.tip];
   }
@@ -169,8 +170,8 @@ export function elementEkraniKur(k) {
       'data-tip': bilgi.tip,
       'aria-label': ayar.etiket || kartAdiKisa(bilgi) + (bilgi.deger ? ' ' + bilgi.deger : ''),
     };
-    if (bilgi.tip === 'element') {
-      ozellik['data-element'] = bilgi.element;
+    if (bilgi.tip === 'sekil') {
+      ozellik['data-sekil'] = bilgi.sekil;
     }
     if (ayar.stil) {
       ozellik.style = ayar.stil;
@@ -184,8 +185,8 @@ export function elementEkraniKur(k) {
     return el(
       etiket,
       ozellik,
-      el('span', { class: 'ed-deger' }, bilgi.tip === 'element' ? String(bilgi.deger) : bilgi.tip === 'ikiye' ? '×2' : ''),
-      el('span', { class: 'ed-simge', html: simgeSvg(bilgi.tip === 'element' ? bilgi.element : bilgi.tip) }),
+      el('span', { class: 'ed-deger' }, bilgi.tip === 'sekil' ? String(bilgi.deger) : bilgi.tip === 'ikiye' ? '×2' : ''),
+      el('span', { class: 'ed-simge', html: simgeSvg(bilgi.tip === 'sekil' ? bilgi.sekil : bilgi.tip) }),
       el('span', { class: 'ed-kartad' }, kartAdiKisa(bilgi))
     );
   }
@@ -200,11 +201,11 @@ export function elementEkraniKur(k) {
   }
 
   // -------------------------------------------------------------------------
-  // Döngü şeması: hangi element hangisini yener
+  // Döngü şeması: hangi şekil hangisini yener
   // -------------------------------------------------------------------------
 
   function dongusemasi() {
-    const konum = { ates: [120, 30], su: [34, 122], toprak: [206, 122] };
+    const konum = { kagit: [120, 30], tas: [34, 122], makas: [206, 122] };
     const yaricap = 22;
 
     // a'dan b'ye ok (daire kenarlarına kadar)
@@ -236,17 +237,17 @@ export function elementEkraniKur(k) {
     }
 
     const svg =
-      '<svg viewBox="0 0 240 170" role="img" aria-label="Su ateşi söndürür, ateş toprağı yakar, toprak suyu emer.">' +
+      '<svg viewBox="0 0 240 170" role="img" aria-label="Kağıt taşı sarar, taş makası kırar, makas kağıdı keser.">' +
       '<defs><marker id="ed-uc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0l10 5-10 5z" class="ed-uc"/></marker></defs>' +
-      ok('su', 'ates', 'söndürür', [50, 68]) +
-      ok('ates', 'toprak', 'yakar', [192, 68]) +
-      ok('toprak', 'su', 'emer', [120, 116]) +
-      dugum('ates') +
-      dugum('su') +
-      dugum('toprak') +
-      '<text x="152" y="35" class="ed-dugum-ad">Ateş</text>' +
-      '<text x="34" y="164" text-anchor="middle" class="ed-dugum-ad">Su</text>' +
-      '<text x="206" y="164" text-anchor="middle" class="ed-dugum-ad">Toprak</text>' +
+      ok('kagit', 'tas', 'sarar', [52, 68]) +
+      ok('tas', 'makas', 'kırar', [120, 116]) +
+      ok('makas', 'kagit', 'keser', [190, 68]) +
+      dugum('kagit') +
+      dugum('tas') +
+      dugum('makas') +
+      '<text x="152" y="35" class="ed-dugum-ad">Kağıt</text>' +
+      '<text x="34" y="164" text-anchor="middle" class="ed-dugum-ad">Taş</text>' +
+      '<text x="206" y="164" text-anchor="middle" class="ed-dugum-ad">Makas</text>' +
       '</svg>';
 
     return el(
@@ -312,10 +313,10 @@ export function elementEkraniKur(k) {
     return i === ben ? 'Sen' : d.oyuncular[i].ad;
   }
 
-  // Kazanan ve yenilen elementler (kartlardan okunur)
-  function elementler(g, i) {
-    const kart = g.kartlar[i].map(kartBilgi).find((b) => b && b.tip === 'element');
-    return kart ? kart.element : null;
+  // Kazanan ve yenilen şekiller (kartlardan okunur)
+  function sekiller(g, i) {
+    const kart = g.kartlar[i].map(kartBilgi).find((b) => b && b.tip === 'sekil');
+    return kart ? kart.sekil : null;
   }
 
   function sonucMetni(d, g, ben) {
@@ -330,21 +331,21 @@ export function elementEkraniKur(k) {
       return d.oyuncular[bosOlan].ad + ' oynayacak kart bulamadı. Bu tur puan yok.';
     }
     if (g.kazanan < 0) {
-      return 'Berabere! Aynı element, aynı sayı. Puan yok.';
+      return 'Berabere! Aynı şekil, aynı sayı. Puan yok.';
     }
     const ad = kazananAdi(d, g.kazanan, ben);
     const fiil = g.kazanan === ben ? ' kazandın' : ' kazandı';
     let neden;
     if (g.neden === 'deger') {
-      neden = 'Aynı element, büyük sayı kazanır.';
+      neden = 'Aynı şekil, büyük sayı kazanır.';
     } else {
-      const kazananEl = elementler(g, g.kazanan);
-      const yenilenEl = elementler(g, rakipIndeks(g.kazanan));
+      const kazananSekil = sekiller(g, g.kazanan);
+      const yenilenSekil = sekiller(g, rakipIndeks(g.kazanan));
       if (g.tersEtkili) {
-        const buyuk = KUCUK_AD[kazananEl];
-        neden = 'Ters Rüzgâr! ' + buyuk + ' ' + BELIRTME_HALI[yenilenEl] + ' yendi.';
+        const buyuk = KUCUK_AD[kazananSekil];
+        neden = 'Ters Rüzgâr! ' + buyuk + ' ' + BELIRTME_HALI[yenilenSekil] + ' yendi.';
       } else {
-        neden = YENME_CUMLESI[kazananEl];
+        neden = YENME_CUMLESI[kazananSekil];
       }
     }
     let puanYazisi = '+' + g.puan + ' puan';
@@ -531,11 +532,11 @@ export function elementEkraniKur(k) {
       taslak = taslak.filter((id) => id !== kartId);
     } else if (bilgi.tip === 'kalkan') {
       taslak = [kartId]; // Kalkan tek başına oynanır
-    } else if (bilgi.tip === 'element') {
-      taslak = taslak.filter((id) => tipi(id) !== 'element' && tipi(id) !== 'kalkan'); // başka element yerine geçer
+    } else if (bilgi.tip === 'sekil') {
+      taslak = taslak.filter((id) => tipi(id) !== 'sekil' && tipi(id) !== 'kalkan'); // başka şekil yerine geçer
       taslak.push(kartId);
     } else {
-      taslak = taslak.filter((id) => tipi(id) === 'element'); // tek özel kart, Kalkan çıkar
+      taslak = taslak.filter((id) => tipi(id) === 'sekil'); // tek özel kart, Kalkan çıkar
       taslak.push(kartId);
     }
     durumum.taslak = taslak;
@@ -545,24 +546,24 @@ export function elementEkraniKur(k) {
   // Seçimin altındaki yönlendirme yazısı. { yazi, uyari, gecerli }
   function secimYardimi(el_, taslak) {
     if (taslak.length === 0) {
-      return { yazi: 'Bir element kartı seç. İstersen yanına bir özel kart ekle.', uyari: false, gecerli: false };
+      return { yazi: 'Bir Taş, Kağıt ya da Makas kartı seç. İstersen yanına bir özel kart ekle.', uyari: false, gecerli: false };
     }
     const sorun = secimHatasi(el_, taslak);
     if (sorun) {
       return { yazi: sorun, uyari: true, gecerli: false };
     }
     const bilgiler = taslak.map(kartBilgi);
-    const element = bilgiler.find((b) => b.tip === 'element');
-    const ozel = bilgiler.find((b) => b.tip !== 'element');
-    if (!element) {
+    const sekil = bilgiler.find((b) => b.tip === 'sekil');
+    const ozel = bilgiler.find((b) => b.tip !== 'sekil');
+    if (!sekil) {
       return { yazi: 'Kalkan: bu tur kimse puan almaz.', uyari: false, gecerli: true };
     }
-    const ad = KUCUK_AD[element.element] + ' ' + element.deger;
+    const ad = KUCUK_AD[sekil.sekil] + ' ' + sekil.deger;
     if (!ozel) {
       return { yazi: ad + ' oynayacaksın.', uyari: false, gecerli: true };
     }
     if (ozel.tip === 'ters') {
-      return { yazi: ad + ' ile Ters Rüzgâr: kim kimi yener tersine döner.', uyari: false, gecerli: true };
+      return { yazi: ad + ' ile Ters Rüzgâr: kural tersine döner.', uyari: false, gecerli: true };
     }
     return { yazi: ad + ' ile İkiye Katla: kazanırsa puan iki katı.', uyari: false, gecerli: true };
   }
@@ -721,7 +722,9 @@ export function elementEkraniKur(k) {
   // Tüm sayfa (üst çubuk dahil): secim, acik ve bitti aşamaları
   // -------------------------------------------------------------------------
 
-  function sayfa(d, ben) {
+  function sayfa(durum, ben) {
+    // Eski anahtarlı (ateş, su, toprak) bir oda gelirse yeni şekillere çevrilir
+    const d = durumuYenile(durum);
     if (ben < 0) {
       return [k.ustCubuk(), el('div', { class: 'ed-sayfa' }, el('p', { class: 'slogan' }, 'Bu odada oyuncu değilsin.'))];
     }

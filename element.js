@@ -1,20 +1,21 @@
-// element.js - Saf "Element Düellosu" motoru (tam 2 kişi, aynı anda kapalı seçim yapılan kart oyunu).
+// element.js - Saf "Taş Kağıt Makas" motoru (tam 2 kişi, aynı anda kapalı seçim yapılan kart oyunu).
+// Dosya adı ve oyun kimliği ('element') eski kalır: eski odalar ve "Kim önde" kayıtları bozulmasın.
 // DOM yok, Supabase yok. Durum girer, yeni durum çıkar (girdi hiç değişmez).
 //
 // Kullanım:
-//   const sonuc = uygula(durum, { tip: 'sec', id: oyuncuId, tur: 0, kartlar: ['ates-3'] }, rastgele);
+//   const sonuc = uygula(durum, { tip: 'sec', id: oyuncuId, tur: 0, kartlar: ['tas-3'] }, rastgele);
 //   sonuc.ok === true  -> sonuc.durum yeni durumdur
 //   sonuc.ok === false -> sonuc.hata kısa bir Türkçe mesajdır
 //
-// Oyun: Üç element var: Ateş, Su, Toprak. Su ateşi söndürür, ateş toprağı yakar, toprak suyu emer.
-// Herkesin kendi destesi var: her elementten 1-5 değerli birer kart (15) + 3 özel kart = 18 kart.
-//   Ters Rüzgâr : bu tur yenme düzeni tersine döner. Bir element kartıyla birlikte oynanır.
+// Oyun: Üç şekil var: Taş, Kağıt, Makas. Kağıt taşı sarar, taş makası kırar, makas kağıdı keser.
+// Herkesin kendi destesi var: her şekilden 1-5 değerli birer kart (15) + 3 özel kart = 18 kart.
+//   Ters Rüzgâr : bu tur yenme düzeni tersine döner (taş kağıdı yener vb.). Bir şekil kartıyla birlikte oynanır.
 //   Kalkan      : tek başına oynanır. O tur kimse puan almaz.
-//   İkiye Katla : bir element kartıyla birlikte oynanır. O kart kazanırsa puan iki katı olur.
+//   İkiye Katla : bir şekil kartıyla birlikte oynanır. O kart kazanırsa puan iki katı olur.
 // Her turda iki oyuncu aynı anda kapalı seçim yapar. İkisi de kilitleyince kartlar açılır.
 // Kazanan, kendi kartının değeri + rakip kartın değeri kadar puan alır.
 //
-// Kart numaraları: 'ates-3', 'su-1', 'toprak-5', 'ters', 'kalkan', 'ikiye'. Desteler ayrı olduğu için
+// Kart numaraları: 'tas-3', 'kagit-1', 'makas-5', 'ters', 'kalkan', 'ikiye'. Desteler ayrı olduğu için
 // iki oyuncuda aynı numaralı kart olabilir; her biri kendi elinde ve kendi destesindedir.
 //
 // Aşamalar: lobi -> secim -> acik -> (secim -> acik) ... -> bitti
@@ -33,19 +34,19 @@ import { oyuncuIndeks, temizAd, benzersizAd } from './uno.js';
 
 export const OYUNCU_SAYISI = 2;
 
-export const ELEMENTLER = ['ates', 'su', 'toprak'];
+export const SEKILLER = ['tas', 'kagit', 'makas'];
 
-export const ELEMENT_ADLARI = {
-  ates: 'Ateş',
-  su: 'Su',
-  toprak: 'Toprak',
+export const SEKIL_ADLARI = {
+  tas: 'Taş',
+  kagit: 'Kağıt',
+  makas: 'Makas',
 };
 
-// Kim kimi yener: anahtar yenen, değer yenilen (su ateşi söndürür, ateş toprağı yakar, toprak suyu emer)
+// Kim kimi yener: anahtar yenen, değer yenilen (kağıt taşı sarar, taş makası kırar, makas kağıdı keser)
 export const YENER = {
-  su: 'ates',
-  ates: 'toprak',
-  toprak: 'su',
+  kagit: 'tas',
+  tas: 'makas',
+  makas: 'kagit',
 };
 
 export const OZEL_KARTLAR = ['ters', 'kalkan', 'ikiye'];
@@ -68,7 +69,7 @@ export const VARSAYILAN_HEDEF = 30;
 // Kart yardımcıları
 // ---------------------------------------------------------------------------
 
-// Bir kartın bilgisi: { tip: 'element', element, deger } | { tip: 'ters' | 'kalkan' | 'ikiye' } | null
+// Bir kartın bilgisi: { tip: 'sekil', sekil, deger } | { tip: 'ters' | 'kalkan' | 'ikiye' } | null
 export function kartBilgi(kartId) {
   if (typeof kartId !== 'string') {
     return null;
@@ -77,14 +78,14 @@ export function kartBilgi(kartId) {
     return { tip: kartId };
   }
   const parcalar = kartId.split('-');
-  if (parcalar.length !== 2 || !ELEMENTLER.includes(parcalar[0])) {
+  if (parcalar.length !== 2 || !SEKILLER.includes(parcalar[0])) {
     return null;
   }
   const deger = Number(parcalar[1]);
   if (!Number.isInteger(deger) || deger < EN_KUCUK_DEGER || deger > EN_BUYUK_DEGER) {
     return null;
   }
-  return { tip: 'element', element: parcalar[0], deger: deger };
+  return { tip: 'sekil', sekil: parcalar[0], deger: deger };
 }
 
 export function kartAdi(kartId) {
@@ -92,18 +93,65 @@ export function kartAdi(kartId) {
   if (!bilgi) {
     return '';
   }
-  if (bilgi.tip === 'element') {
-    return ELEMENT_ADLARI[bilgi.element] + ' ' + bilgi.deger;
+  if (bilgi.tip === 'sekil') {
+    return SEKIL_ADLARI[bilgi.sekil] + ' ' + bilgi.deger;
   }
   return OZEL_ADLARI[bilgi.tip];
 }
 
-// Karıştırılmamış tam deste: 15 element kartı + 3 özel kart = 18
+// Eski anahtarlar (Element Düellosu dönemi) yeni şekillere denk gelir: ateş=taş, su=kağıt, toprak=makas.
+// Yenme döngüsü birebir aynı kaldığı için eski odalar yeni kurallarla sorunsuz sürer.
+const ESKI_ANAHTARLAR = {
+  ates: 'tas',
+  su: 'kagit',
+  toprak: 'makas',
+};
+
+// Tek bir kart numarasını yeni anahtara çevirir ('ates-3' -> 'tas-3'). Zaten yeniyse olduğu gibi döner.
+export function eskiKartiCevir(kartId) {
+  if (typeof kartId !== 'string') {
+    return kartId;
+  }
+  const parcalar = kartId.split('-');
+  if (parcalar.length === 2 && ESKI_ANAHTARLAR[parcalar[0]]) {
+    return ESKI_ANAHTARLAR[parcalar[0]] + '-' + parcalar[1];
+  }
+  return kartId;
+}
+
+// Durumda eski anahtar varsa, çevrilmiş bir KOPYA döner. Yoksa aynı nesneyi verir (girdi hiç değişmez).
+export function durumuYenile(durum) {
+  const kartListesi = (liste) => (Array.isArray(liste) ? liste.map(eskiKartiCevir) : liste);
+  const eskiMi = JSON.stringify(durum).search(/"(ates|su|toprak)-\d"/) >= 0;
+  const eskiNeden = JSON.stringify(durum).includes('"neden":"element"');
+  if (!eskiMi && !eskiNeden) {
+    return durum;
+  }
+  const d = structuredClone(durum);
+  for (const alan of ['desteler', 'eller', 'atilanlar']) {
+    if (Array.isArray(d[alan])) {
+      d[alan] = d[alan].map(kartListesi);
+    }
+  }
+  if (Array.isArray(d.secimler)) {
+    d.secimler = d.secimler.map((s) => (s ? { ...s, kartlar: kartListesi(s.kartlar) } : s));
+  }
+  if (Array.isArray(d.gecmis)) {
+    d.gecmis = d.gecmis.map((g) => ({
+      ...g,
+      kartlar: Array.isArray(g.kartlar) ? g.kartlar.map(kartListesi) : g.kartlar,
+      neden: g.neden === 'element' ? 'sekil' : g.neden,
+    }));
+  }
+  return d;
+}
+
+// Karıştırılmamış tam deste: 15 şekil kartı + 3 özel kart = 18
 export function tamDeste() {
   const deste = [];
-  for (const element of ELEMENTLER) {
+  for (const sekil of SEKILLER) {
     for (let deger = EN_KUCUK_DEGER; deger <= EN_BUYUK_DEGER; deger++) {
-      deste.push(element + '-' + deger);
+      deste.push(sekil + '-' + deger);
     }
   }
   for (const ozel of OZEL_KARTLAR) {
@@ -128,15 +176,15 @@ export function desteKur(rastgele = Math.random) {
   return karistir(tamDeste(), rastgele);
 }
 
-// Elin ekranda düzgün durması için sıralaması: önce elementler (ateş, su, toprak, küçükten büyüğe), sonra özel kartlar
+// Elin ekranda düzgün durması için sıralaması: önce şekiller (taş, kağıt, makas, küçükten büyüğe), sonra özel kartlar
 export function elSirala(el) {
   const sira = (kartId) => {
     const bilgi = kartBilgi(kartId);
     if (!bilgi) {
       return 1000;
     }
-    if (bilgi.tip === 'element') {
-      return ELEMENTLER.indexOf(bilgi.element) * 10 + bilgi.deger;
+    if (bilgi.tip === 'sekil') {
+      return SEKILLER.indexOf(bilgi.sekil) * 10 + bilgi.deger;
     }
     return 100 + OZEL_KARTLAR.indexOf(bilgi.tip);
   };
@@ -170,24 +218,24 @@ export function secimHatasi(el, kartlar) {
     }
     bilgiler.push(bilgi);
   }
-  const elementSayisi = bilgiler.filter((b) => b.tip === 'element').length;
-  const ozelSayisi = bilgiler.length - elementSayisi;
+  const sekilSayisi = bilgiler.filter((b) => b.tip === 'sekil').length;
+  const ozelSayisi = bilgiler.length - sekilSayisi;
 
   if (ozelSayisi > 1) {
     return 'Bir turda en fazla bir özel kart oynanır.';
   }
   if (bilgiler.length === 1) {
     if (bilgiler[0].tip === 'ters') {
-      return 'Ters Rüzgâr tek başına oynanmaz. Yanına bir element kartı seç.';
+      return 'Ters Rüzgâr tek başına oynanmaz. Yanına bir şekil kartı seç.';
     }
     if (bilgiler[0].tip === 'ikiye') {
-      return 'İkiye Katla tek başına oynanmaz. Yanına bir element kartı seç.';
+      return 'İkiye Katla tek başına oynanmaz. Yanına bir şekil kartı seç.';
     }
-    return null; // tek element kartı ya da Kalkan
+    return null; // tek şekil kartı ya da Kalkan
   }
-  // İki kart: bir element + bir özel kart
-  if (elementSayisi !== 1) {
-    return 'İki element kartı birlikte oynanmaz.';
+  // İki kart: bir şekil + bir özel kart
+  if (sekilSayisi !== 1) {
+    return 'İki şekil kartı birlikte oynanmaz.';
   }
   if (bilgiler.some((b) => b.tip === 'kalkan')) {
     return 'Kalkan tek başına oynanır.';
@@ -203,7 +251,7 @@ export function oyunAyristir(kartlar) {
     kalkan: false,
     ters: false,
     ikiye: false,
-    element: null,
+    sekil: null,
     deger: 0,
   };
   for (const kartId of kartlar) {
@@ -211,8 +259,8 @@ export function oyunAyristir(kartlar) {
     if (!bilgi) {
       continue;
     }
-    if (bilgi.tip === 'element') {
-      oyun.element = bilgi.element;
+    if (bilgi.tip === 'sekil') {
+      oyun.sekil = bilgi.sekil;
       oyun.deger = bilgi.deger;
     } else if (bilgi.tip === 'kalkan') {
       oyun.kalkan = true;
@@ -225,13 +273,13 @@ export function oyunAyristir(kartlar) {
   return oyun;
 }
 
-// a elementi b elementini yener mi? (normal düzen)
+// a şekli b şeklini yener mi? (normal düzen)
 export function yenerMi(a, b) {
   return YENER[a] === b;
 }
 
 // İki seçimi karşılaştırır. { kazanan: 0 | 1 | -1, puan, neden, tersEtkili, ikiyeEtkili }
-//   neden: kalkan | rakipYok | element | deger | berabere
+//   neden: kalkan | rakipYok | sekil | deger | berabere
 export function turuCoz(a, b) {
   const ters = a.ters !== b.ters; // iki ters birbirini götürür
   const sonuc = { kazanan: -1, puan: 0, neden: 'berabere', tersEtkili: ters, ikiyeEtkili: false };
@@ -248,13 +296,13 @@ export function turuCoz(a, b) {
   }
 
   let kazanan = -1;
-  if (a.element !== b.element) {
-    sonuc.neden = 'element';
-    const aYener = ters ? yenerMi(b.element, a.element) : yenerMi(a.element, b.element);
+  if (a.sekil !== b.sekil) {
+    sonuc.neden = 'sekil';
+    const aYener = ters ? yenerMi(b.sekil, a.sekil) : yenerMi(a.sekil, b.sekil);
     kazanan = aYener ? 0 : 1;
   } else if (a.deger !== b.deger) {
     sonuc.neden = 'deger';
-    sonuc.tersEtkili = false; // aynı elementte yenme döngüsü işlemez, büyük değer kazanır
+    sonuc.tersEtkili = false; // aynı şekilde yenme döngüsü işlemez, büyük değer kazanır
     kazanan = a.deger > b.deger ? 0 : 1;
   } else {
     sonuc.tersEtkili = false;
@@ -283,7 +331,7 @@ function yeniOyuncu(id, ad) {
 // Verilen oyuncularla (id, ad) boş bir lobi kurar. Oyun değiştirirken de bu kullanılır.
 export function lobiKur(oyuncular, sahipId) {
   return {
-    oyun: 'element',
+    oyun: 'element', // oyun kimliği eski kalır (eski odalar bozulmasın)
     asama: 'lobi', // lobi | secim | acik | bitti
     sahip: sahipId,
     ayar: {
@@ -312,11 +360,11 @@ export function rakipIndeks(i) {
   return 1 - i;
 }
 
-// Eldeki kartlarla oynanabilecek bir hamle var mı? (bir element kartı ya da Kalkan)
+// Eldeki kartlarla oynanabilecek bir hamle var mı? (bir şekil kartı ya da Kalkan)
 export function oynayabilirMi(el) {
   return el.some((kartId) => {
     const bilgi = kartBilgi(kartId);
-    return bilgi && (bilgi.tip === 'element' || bilgi.tip === 'kalkan');
+    return bilgi && (bilgi.tip === 'sekil' || bilgi.tip === 'kalkan');
   });
 }
 
@@ -552,11 +600,13 @@ function secIsle(d, e) {
   if (d.secimler[idx]) {
     return 'Zaten seçtin.';
   }
-  const sorun = secimHatasi(d.eller[idx], e.kartlar);
+  // Eski sekmeden gelen eski anahtarlar da kabul edilir
+  const kartlar = Array.isArray(e.kartlar) ? e.kartlar.map(eskiKartiCevir) : e.kartlar;
+  const sorun = secimHatasi(d.eller[idx], kartlar);
   if (sorun) {
     return sorun;
   }
-  d.secimler[idx] = { kartlar: e.kartlar.slice() };
+  d.secimler[idx] = { kartlar: kartlar.slice() };
   if (d.secimler.every(Boolean)) {
     turuBitir(d);
   }
@@ -603,7 +653,7 @@ export function uygula(durum, eylem, rastgele = Math.random) {
   if (!islem) {
     return { ok: false, hata: 'Bilinmeyen hareket.' };
   }
-  const d = structuredClone(durum);
+  const d = structuredClone(durumuYenile(durum));
   const hata = islem(d, eylem, rastgele);
   if (hata) {
     return { ok: false, hata: hata };

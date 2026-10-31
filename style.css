@@ -1,4 +1,4 @@
-/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun", "Kelime düellosu", "Aynı Kafa", "Gizli Yol", "Gizli Görev", "Element Düellosu" ve "Risk Kulesi"). Önce telefon (360-430px), büyük ekranda ortalanır. */
+/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun", "Kelime düellosu", "Aynı Kafa", "Gizli Yol", "Gizli Görev", "Taş Kağıt Makas" ve "Risk Kulesi"). Önce telefon (360-430px), büyük ekranda ortalanır. */
 
 :root {
   --bg: #0c2f26;
@@ -103,17 +103,17 @@
   --kotu: #ff7a68;
 }
 
-/* "Element Düellosu" odasında koyu, mistik mürdüm-indigo masa; kartlar canlı */
+/* "Taş Kağıt Makas" odasında koyu deniz yeşili masa, sarı vurgu; kartlar canlı */
 :root[data-tema='element'] {
-  --bg: #1a1040;
-  --bg-ust: #3d1f63;
-  --panel: rgba(8, 4, 28, 0.42);
-  --panel-acik: rgba(190, 150, 255, 0.12);
-  --yazi: #f3ecff;
-  --yazi-soluk: #b9a8dc;
-  --vurgu: #c9a2ff;
+  --bg: #0f3a4a;
+  --bg-ust: #17606a;
+  --panel: rgba(3, 20, 28, 0.42);
+  --panel-acik: rgba(255, 212, 94, 0.12);
+  --yazi: #effaf8;
+  --yazi-soluk: #9fcdc9;
+  --vurgu: #ffd45e;
   --iyi: #6ee7a8;
-  --kotu: #ff7a8a;
+  --kotu: #ff8a7a;
 }
 
 * {
@@ -3343,7 +3343,7 @@ button {
 }
 
 /* ------------------------------------------------------------------ */
-/* Element Düellosu                                                    */
+/* Taş Kağıt Makas                                                      */
 /* ------------------------------------------------------------------ */
 
 .ed-sayfa {
@@ -3449,16 +3449,24 @@ button {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.ed-kart[data-element='ates'] {
-  background: linear-gradient(160deg, #ffb347 0%, #ff5a2a 55%, #c4181a 100%);
+/* Taş: gri kaya */
+.ed-kart[data-sekil='tas'] {
+  background: linear-gradient(160deg, #c3cad3 0%, #7b8594 55%, #454d5c 100%);
 }
 
-.ed-kart[data-element='su'] {
-  background: linear-gradient(160deg, #6fe3ff 0%, #2f8cff 55%, #1b3fb8 100%);
+/* Kağıt: açık kâğıt rengi, koyu yazı */
+.ed-kart[data-sekil='kagit'] {
+  background: linear-gradient(160deg, #ffffff 0%, #eaf2ff 55%, #b9cdee 100%);
+  color: #1d3566;
 }
 
-.ed-kart[data-element='toprak'] {
-  background: linear-gradient(160deg, #b6ee6a 0%, #4faa3c 50%, #6b4a22 100%);
+.ed-kart[data-sekil='kagit'] .ed-deger {
+  text-shadow: none;
+}
+
+/* Makas: canlı kırmızı */
+.ed-kart[data-sekil='makas'] {
+  background: linear-gradient(160deg, #ff8f7a 0%, #f0443a 55%, #a3141f 100%);
 }
 
 .ed-kart[data-tip='ters'] {
@@ -3573,10 +3581,10 @@ button {
 .ed-kart.sirt {
   background:
     repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.07) 0 6px, transparent 6px 12px),
-    linear-gradient(160deg, #5b2ea6 0%, #2a1470 60%, #160b45 100%);
-  border-color: #c9a2ff;
+    linear-gradient(160deg, #1e8a8a 0%, #0f5560 60%, #082f3a 100%);
+  border-color: #ffd45e;
   justify-content: center;
-  color: #e1c9ff;
+  color: #ffe9a8;
 }
 
 .ed-sirt-isaret {
@@ -3597,8 +3605,8 @@ button {
   gap: 8px;
   padding: 12px 8px;
   border-radius: 20px;
-  background: radial-gradient(ellipse at 50% 50%, rgba(160, 110, 255, 0.28) 0%, rgba(20, 8, 60, 0.6) 75%);
-  border: 2px solid rgba(201, 162, 255, 0.35);
+  background: radial-gradient(ellipse at 50% 50%, rgba(255, 212, 94, 0.2) 0%, rgba(2, 24, 32, 0.6) 75%);
+  border: 2px solid rgba(255, 212, 94, 0.35);
 }
 
 .ed-yuva {
@@ -3608,12 +3616,12 @@ button {
   justify-content: center;
   gap: 10px;
   border-radius: 14px;
-  border: 2px dashed rgba(201, 162, 255, 0.28);
+  border: 2px dashed rgba(255, 212, 94, 0.28);
 }
 
 .ed-yuva.dolu {
   border-style: solid;
-  border-color: rgba(201, 162, 255, 0.55);
+  border-color: rgba(255, 212, 94, 0.55);
 }
 
 .ed-yuva-bos {
@@ -3846,20 +3854,24 @@ button {
   height: auto;
 }
 
-.ed-dugum.ates {
-  fill: #e8452a;
+.ed-dugum.tas {
+  fill: #6a7484;
 }
 
-.ed-dugum.su {
-  fill: #2f7de8;
+.ed-dugum.kagit {
+  fill: #e6efff;
 }
 
-.ed-dugum.toprak {
-  fill: #4d9a3a;
+.ed-dugum.makas {
+  fill: #e5473d;
 }
 
 .ed-dugum-simge {
   color: #fff;
+}
+
+.ed-dugum-simge.kagit {
+  color: #3a63b8;
 }
 
 .ed-ok {
