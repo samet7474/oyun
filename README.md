@@ -92,7 +92,7 @@ Sonda **Uyum** yüzdesi (doğru tahmin / (2 x soru sayısı)) ve **Bunları konu
 ### Gizli Yol
 Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6x6 karedir. Herkes gizli bir yol çizer, sonra birbirinin yolunu bulur.
 - **Kurma:** Yol alt satırdaki bir kareden başlar, üst satırdaki bir karede biter. Her adım bir önceki kareye yan yana ya da alt alta komşudur
-  (çapraz yok), aynı kareden iki kez geçilmez. Yol en az 8 kare olmalı (ayar: **Kısa** 8 kare, **Uzun** 12 kare).
+  (çapraz yok), aynı kareden iki kez geçilmez. Yol kısa ayarda 8-10, uzun ayarda 12-14 kare olmalı (ayar: **Kısa: 8-10 kare**, **Uzun: 12-14 kare**). Ekranda "Yol: 7 kare (8-10 arası olmalı)" sayacı vardır, geçerli aralıkta yeşil olur. Üst sınıra gelince yeni kare eklenmez, kısa bir uyarı çıkar. Eski odalardaki "kısa"/"uzun"/sayı ayarı yeni aralıklardan birine eşlenir.
   Parmakla çizilir: kareye dokundukça yol uzar, son kareye dokununca bir adım geri alınır, **Temizle** hepsini siler.
   Yol geçerli olunca **Hazırım**'a basılır (rakip hazır olmadan **Yolu değiştir** ile vazgeçilebilir). İkisi de hazır olunca bulma başlar.
 - **Bulma:** Önce alt satırda başlangıç karesi aranır, sonra hep son bulunan kareye komşu bir kareye dokunulur.
@@ -104,7 +104,7 @@ Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6x6 karedir. Herkes gizli 
 - İkisi de bitirince tur biter: daha az hata yapan turu alır, eşitse berabere (puan yok). Sonuçta iki yol da açılır;
   her yolun üstünde rakibin o yolda yaptığı hatalar gösterilir. Herhangi biri **Sonraki tur**'a basabilir.
 - Biri 25 hataya ulaşırsa **Pes et** düğmesi çıkar: pes eden o tur 25 hata sayılır ve rakibin bitirmesini bekler.
-- Ayarlar (ev sahibi): tur sayısı 1 / 3 / 5, yolun en az uzunluğu 8 / 12 kare. Sonda kazanan, **Tekrar oyna** ve **Lobiye dön** çıkar.
+- Ayarlar (ev sahibi): tur sayısı 1 / 3 / 5, yol uzunluğu kısa (8-10 kare) / uzun (12-14 kare). Sonda kazanan, **Tekrar oyna** ve **Lobiye dön** çıkar.
 - Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Gizli Yol seçilemez.
 - Bilinen sınır: yollar oda satırında durur (durum herkese açıktır); ekran bulma bitene kadar rakibin yolunu çizmez.
 

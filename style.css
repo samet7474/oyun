@@ -4410,3 +4410,15 @@ button {
     animation: none;
   }
 }
+
+/* Gizli Yol: çizim sırasında kare sayacı (geçerli aralıktaysa yeşil) */
+.gy-yol-sayac {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--yazi-soluk);
+}
+
+.gy-yol-sayac.iyi {
+  color: var(--iyi);
+}

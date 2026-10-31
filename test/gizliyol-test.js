@@ -14,6 +14,9 @@ import {
   uygula,
   yeniOda,
   yolHatasi,
+  yolEnAz,
+  yolEnCok,
+  yolAyariniDuzelt,
 } from '../gizliyol.js';
 import { OYUNLAR, oyunId, uygula as yonlendir, yeniOda as yonlendirYeniOda } from '../oyunlar.js';
 
@@ -211,7 +214,110 @@ test('çok kısa yol reddedilir, ayar uzun ise 12 kare gerekir', () => {
     [0, 2],
   ];
   assert.match(yolHatasi(duz, 8), /en az 8/);
-  assert.equal(yolHatasi(duz, 6), null);
+  assert.equal(yolHatasi(duz, 8) !== null, true);
+});
+
+// n kare uzunluğunda geçerli bir yol (6 ile 16 arası): alt satırdan üst satıra
+function yolOlustur(n) {
+  const yol = [];
+  if (n <= 11) {
+    // alt satırda sağa git, sonra üst satıra kadar çık
+    const yatay = n - 6;
+    for (let sutun = 0; sutun <= yatay; sutun++) {
+      yol.push([5, sutun]);
+    }
+    for (let satir = 4; satir >= 0; satir--) {
+      yol.push([satir, yatay]);
+    }
+    return yol;
+  }
+  // alt satırı sonuna kadar yürü, bir üst satırda geri dön, sonra yukarı çık
+  const geri = n - 11;
+  for (let sutun = 0; sutun <= 5; sutun++) {
+    yol.push([5, sutun]);
+  }
+  for (let sutun = 5; sutun >= 5 - geri; sutun--) {
+    yol.push([4, sutun]);
+  }
+  for (let satir = 3; satir >= 0; satir--) {
+    yol.push([satir, 5 - geri]);
+  }
+  return yol;
+}
+
+test('yol uzunluğu aralıkları: kısa 8-10, uzun 12-14', () => {
+  assert.equal(yolEnAz(8), 8);
+  assert.equal(yolEnCok(8), 10);
+  assert.equal(yolEnAz(12), 12);
+  assert.equal(yolEnCok(12), 14);
+  for (const n of [6, 7, 11, 12, 13, 14, 15, 16]) {
+    assert.equal(yolOlustur(n).length, n);
+    assert.equal(yolHatasi(yolOlustur(n), 100), yolHatasi(yolOlustur(n), 12));
+  }
+});
+
+test('kısa ayar: 7 kare az, 8 ve 10 kare geçerli, 11 kare fazla', () => {
+  assert.match(yolHatasi(yolOlustur(7), 8), /en az 8/);
+  assert.equal(yolHatasi(yolOlustur(8), 8), null);
+  assert.equal(yolHatasi(yolOlustur(9), 8), null);
+  assert.equal(yolHatasi(yolOlustur(10), 8), null);
+  assert.equal(yolHatasi(yolOlustur(11), 8), 'Yol en fazla 10 kare olabilir.');
+  assert.equal(yolHatasi(yolOlustur(16), 8), 'Yol en fazla 10 kare olabilir.');
+});
+
+test('uzun ayar: 11 kare az, 12 ve 14 kare geçerli, 15 kare fazla', () => {
+  assert.match(yolHatasi(yolOlustur(11), 12), /en az 12/);
+  assert.equal(yolHatasi(yolOlustur(12), 12), null);
+  assert.equal(yolHatasi(yolOlustur(13), 12), null);
+  assert.equal(yolHatasi(yolOlustur(14), 12), null);
+  assert.equal(yolHatasi(yolOlustur(15), 12), 'Yol en fazla 14 kare olabilir.');
+  assert.equal(yolHatasi(yolOlustur(16), 12), 'Yol en fazla 14 kare olabilir.');
+});
+
+test('tüm tahtayı dolaşan 36 karelik yol her iki ayarda da reddedilir', () => {
+  const hepsi = [];
+  for (let satir = 5; satir >= 0; satir--) {
+    for (let i = 0; i < 6; i++) {
+      const sutun = (5 - satir) % 2 === 0 ? i : 5 - i;
+      hepsi.push([satir, sutun]);
+    }
+  }
+  assert.equal(hepsi.length, 36);
+  assert.match(yolHatasi(hepsi, 8), /en fazla 10/);
+  assert.match(yolHatasi(hepsi, 12), /en fazla 14/);
+});
+
+test('motor: üst sınırı aşan yolla Hazırım reddedilir, sınırdaki yol kabul edilir', () => {
+  const kisa = baslat({ enAzKare: 8 });
+  assert.equal(hatali(u(kisa, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(11) })), 'Yol en fazla 10 kare olabilir.');
+  assert.equal(basarili(u(kisa, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(10) })).hazir[0], true);
+  assert.equal(basarili(u(kisa, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(8) })).hazir[0], true);
+  const uzun = baslat({ enAzKare: 12 });
+  assert.equal(hatali(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(15) })), 'Yol en fazla 14 kare olabilir.');
+  assert.equal(basarili(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(14) })).hazir[0], true);
+  assert.equal(basarili(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(12) })).hazir[0], true);
+});
+
+test('eski ayar değerleri yeni aralıklara eşlenir ve oda kırılmaz', () => {
+  assert.equal(yolAyariniDuzelt('kısa'), 8);
+  assert.equal(yolAyariniDuzelt('kisa'), 8);
+  assert.equal(yolAyariniDuzelt('Uzun'), 12);
+  assert.equal(yolAyariniDuzelt(8), 8);
+  assert.equal(yolAyariniDuzelt(12), 12);
+  assert.equal(yolAyariniDuzelt(10), 8);
+  assert.equal(yolAyariniDuzelt(14), 12);
+  assert.equal(yolAyariniDuzelt(undefined), 8);
+  assert.equal(yolAyariniDuzelt(null), 8);
+  assert.equal(yolEnCok('uzun'), 14);
+  assert.equal(yolEnCok('kısa'), 10);
+  // Odada eski biçimde ("uzun", "kısa", ayarsız) kayıtlı değerle oyun yine işler
+  const uzun = baslat({ enAzKare: 'uzun' });
+  assert.match(hatali(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(8) })), /en az 12/);
+  assert.equal(basarili(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(14) })).hazir[0], true);
+  const kisa = baslat({ enAzKare: 'kısa' });
+  assert.match(hatali(u(kisa, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(12) })), /en fazla 10/);
+  const ayarsiz = baslat({ enAzKare: undefined });
+  assert.equal(basarili(u(ayarsiz, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(9) })).hazir[0], true);
 });
 
 test('alt satırdan başlamayan ve üst satırda bitmeyen yol reddedilir', () => {
@@ -373,8 +479,9 @@ test('hazirIptal: rakip hazır olmadan yol geri alınır ve değiştirilir', () 
   d = basarili(u(d, { tip: 'hazirIptal', id: pid(0), tur: 0 }));
   assert.deepEqual(d.hazir, [false, false]);
   assert.equal(d.yollar[0], null);
-  d = hazirOl(d, 0, YOL_UZUN);
-  assert.deepEqual(d.yollar[0], YOL_UZUN);
+  const yeniYol = yolOlustur(10);
+  d = hazirOl(d, 0, yeniYol);
+  assert.deepEqual(d.yollar[0], yeniYol);
   d = hazirOl(d, 1, YOL_B);
   assert.equal(d.asama, 'bulma');
   assert.match(hatali(u(d, { tip: 'hazirIptal', id: pid(0), tur: 0 })), /değişmez/);

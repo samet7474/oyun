@@ -37,9 +37,44 @@ export const OYUNCU_SAYISI = 2;
 export const TUR_SAYILARI = [1, 3, 5];
 export const VARSAYILAN_TUR_SAYISI = 3;
 
-// Yolun en az kare sayısı: kısa 8, uzun 12
+// Yolun kare sayısı bir aralıktadır: kısa 8-10, uzun 12-14.
+// Ayarda aralığın alt sınırı saklanır (enAzKare); üst sınır ondan bulunur.
 export const YOL_UZUNLUKLARI = [8, 12];
 export const VARSAYILAN_YOL_UZUNLUK = 8;
+const YOL_ARALIGI_GENISLIK = 2; // alt sınırdan üst sınıra fark
+
+// Eski odalarda kayıtlı ayar değeri ("kısa", "uzun" ya da herhangi bir sayı)
+// yeni aralıklardan birine eşlenir. Bilinmeyen değer varsayılan olur.
+export function yolAyariniDuzelt(deger) {
+  if (YOL_UZUNLUKLARI.includes(deger)) {
+    return deger;
+  }
+  if (typeof deger === 'string') {
+    const kucuk = deger.toLocaleLowerCase('tr');
+    if (kucuk === 'uzun') {
+      return YOL_UZUNLUKLARI[1];
+    }
+    if (kucuk === 'kısa' || kucuk === 'kisa') {
+      return YOL_UZUNLUKLARI[0];
+    }
+    deger = Number(deger);
+  }
+  if (typeof deger === 'number' && Number.isFinite(deger)) {
+    // Kısa aralığın üstündeki sayılar (11 ve üzeri) uzun sayılır
+    return deger > YOL_UZUNLUKLARI[0] + YOL_ARALIGI_GENISLIK ? YOL_UZUNLUKLARI[1] : YOL_UZUNLUKLARI[0];
+  }
+  return VARSAYILAN_YOL_UZUNLUK;
+}
+
+// Ayardaki değerden yolun en az kare sayısı (kısa 8, uzun 12)
+export function yolEnAz(ayarDegeri) {
+  return yolAyariniDuzelt(ayarDegeri);
+}
+
+// Ayardaki değerden yolun en çok kare sayısı (kısa 10, uzun 14)
+export function yolEnCok(ayarDegeri) {
+  return yolAyariniDuzelt(ayarDegeri) + YOL_ARALIGI_GENISLIK;
+}
 
 // Bu kadar hataya ulaşan oyuncu pes edebilir. Pes edince tur bu kadar hata sayılır.
 export const PES_HATASI = 25;
@@ -68,7 +103,9 @@ export function kareAnahtari(satir, sutun) {
 }
 
 // Yol geçerli mi? Hata mesajı ya da null.
-export function yolHatasi(yol, enAz = VARSAYILAN_YOL_UZUNLUK) {
+export function yolHatasi(yol, ayarDegeri = VARSAYILAN_YOL_UZUNLUK) {
+  const enAz = yolEnAz(ayarDegeri);
+  const enCok = yolEnCok(ayarDegeri);
   if (!Array.isArray(yol) || yol.length === 0) {
     return 'Önce bir yol çiz.';
   }
@@ -86,6 +123,9 @@ export function yolHatasi(yol, enAz = VARSAYILAN_YOL_UZUNLUK) {
     if (i > 0 && !komsuMu(yol[i - 1], kare)) {
       return 'Her adım yan yana ya da alt alta olmalı.';
     }
+  }
+  if (yol.length > enCok) {
+    return 'Yol en fazla ' + enCok + ' kare olabilir.';
   }
   if (yol[0][0] !== ALT_SATIR) {
     return 'Yol alt satırdan başlamalı.';
