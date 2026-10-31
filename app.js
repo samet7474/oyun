@@ -1086,8 +1086,28 @@ function ustCubuk() {
         )
       : null,
     sesDugmesi(),
-    el('button', { class: 'link-dugme', onclick: () => odadanCik() }, 'Çık')
+    el('button', { class: 'link-dugme', onclick: () => cikmayiSor(d) }, 'Çık')
   );
+}
+
+// Oyun sürerken "Çık" önce sorar: lobide ve oyun bitince doğrudan çıkılır
+function cikmayiSor(d) {
+  if (!d || d.asama === 'lobi' || d.asama === 'bitti') {
+    odadanCik();
+    return;
+  }
+  const metin = oyunId(d) === 'kule'
+    ? 'Oyundan çıkarsan oyuna geri dönemezsin. Diğerleri sensiz devam eder. Emin misin?'
+    : 'Oyun sürüyor. Çıkarsan diğer oyuncular seni bekler. Aynı oda koduyla geri dönebilirsin. Emin misin?';
+  onayIste(metin, {
+    tamam: 'Çık',
+    iptal: 'Oyunda kal',
+    tehlikeli: true,
+  }).then((evet) => {
+    if (evet) {
+      odadanCik();
+    }
+  });
 }
 
 // Ses aç/kapa düğmesi (varsayılan kapalı, tercih tarayıcıda saklanır)
