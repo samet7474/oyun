@@ -36,7 +36,9 @@ export const SATIR_SAYILARI = [8, 10];
 export const VARSAYILAN_SATIR_SAYISI = 10;
 
 // Bak süresi (saniye)
-export const BAKMA_SURELERI = [3, 5, 10, 15];
+// Bak süresi kaydırıcıyla saniye saniye seçilir
+export const EN_AZ_BAKMA_SURESI = 1;
+export const EN_COK_BAKMA_SURESI = 20;
 export const VARSAYILAN_BAKMA_SURESI = 5;
 
 export const OYUNCU_SAYISI = 2;
@@ -68,7 +70,12 @@ export function satirSayisiOku(d) {
 // Ayardan Bak süresi (geçersizse varsayılan)
 export function bakmaSuresiOku(d) {
   const deger = d && d.ayar ? d.ayar.bakmaSuresi : undefined;
-  return BAKMA_SURELERI.includes(deger) ? deger : VARSAYILAN_BAKMA_SURESI;
+  return bakmaSuresiGecerli(deger) ? deger : VARSAYILAN_BAKMA_SURESI;
+}
+
+// 1 ile 20 arasında tam sayı mı?
+export function bakmaSuresiGecerli(deger) {
+  return Number.isInteger(deger) && deger >= EN_AZ_BAKMA_SURESI && deger <= EN_COK_BAKMA_SURESI;
 }
 
 // Ayardan tur sayısı (geçersizse varsayılan)
@@ -357,7 +364,7 @@ function ayarlaIsle(d, e) {
   if (ayar.satirSayisi !== undefined && !SATIR_SAYILARI.includes(ayar.satirSayisi)) {
     return 'Geçersiz satır sayısı.';
   }
-  if (ayar.bakmaSuresi !== undefined && !BAKMA_SURELERI.includes(ayar.bakmaSuresi)) {
+  if (ayar.bakmaSuresi !== undefined && !bakmaSuresiGecerli(ayar.bakmaSuresi)) {
     return 'Geçersiz bakma süresi.';
   }
   if (ayar.turSayisi !== undefined) {

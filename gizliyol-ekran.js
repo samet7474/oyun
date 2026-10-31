@@ -7,7 +7,8 @@
 
 import { onayIste } from './onay.js';
 import {
-  BAKMA_SURELERI,
+  EN_AZ_BAKMA_SURESI,
+  EN_COK_BAKMA_SURESI,
   PES_HATASI,
   SATIR_SAYILARI,
   SUTUN_SAYISI,
@@ -191,6 +192,33 @@ export function gizliyolEkraniKur(k) {
     );
   }
 
+  // Bak süresi: ses ayarı gibi kaydırılarak seçilir.
+  // Kaydırırken yalnız yazı değişir; parmak bırakılınca ayar odaya yazılır.
+  function bakmaKaydiricisi(d, sahipMi) {
+    const sure = bakmaSuresiOku(d);
+    const yazi = el('span', { class: 'gy-kaydirici-deger' }, sure + ' sn');
+    const kaydirici = el('input', {
+      class: 'gy-kaydirici',
+      type: 'range',
+      min: String(EN_AZ_BAKMA_SURESI),
+      max: String(EN_COK_BAKMA_SURESI),
+      step: '1',
+      value: String(sure),
+      disabled: !sahipMi,
+      'aria-label': 'Bak süresi (saniye)',
+      oninput: (olay) => {
+        yazi.textContent = olay.target.value + ' sn';
+      },
+      onchange: (olay) => {
+        const yeni = Number(olay.target.value);
+        if (yeni !== bakmaSuresiOku(istemci.durum)) {
+          k.hamle({ tip: 'ayarla', ayar: { bakmaSuresi: yeni } });
+        }
+      },
+    });
+    return el('div', { class: 'gy-kaydirici-satir' }, kaydirici, yazi);
+  }
+
   function lobiBolumu(d, sahipMi) {
     const yeterli = d.oyuncular.length === 2;
 
@@ -205,7 +233,7 @@ export function gizliyolEkraniKur(k) {
         el('div', { class: 'etiket' }, 'Tahta büyüklüğü'),
         el('div', { class: 'secenekler' }, secenekDugmeleri(SATIR_SAYILARI, satirSayisiOku(d), sahipMi, (n) => n + ' satır', 'satirSayisi')),
         el('div', { class: 'etiket' }, 'Bak süresi'),
-        el('div', { class: 'secenekler' }, secenekDugmeleri(BAKMA_SURELERI, bakmaSuresiOku(d), sahipMi, (n) => n + ' sn', 'bakmaSuresi')),
+        bakmaKaydiricisi(d, sahipMi),
         sahipMi ? null : el('p', { class: 'soluk-yazi' }, 'Ayarları sadece ev sahibi değiştirir.')
       ),
       nasilOynanirKutusu(),

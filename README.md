@@ -103,7 +103,7 @@ Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6 sütun ve 8 ya da 10 sat
 - Bütün satırları bulan bitirir. Rakibin ilerlemesi canlı görünür (kaç satır buldu, kaç hata), kutuları görünmez.
 - İkisi de bitirince tur biter: daha az hata yapan turu alır, eşitse berabere (puan yok). Sonuçta iki yol ve karşı tarafın o yolda yaptığı hatalar gösterilir. Herhangi biri **Sonraki tur**'a basabilir.
 - Biri 25 hataya ulaşırsa **Pes et** düğmesi çıkar: pes eden o tur 25 hata sayılır ve rakibin bitirmesini bekler.
-- Ayarlar (ev sahibi): tur sayısı 1 / 3 / 5, tahta 8 ya da 10 satır (varsayılan 10), Bak süresi 3 / 5 / 10 / 15 saniye (varsayılan 5). Sonda kazanan, **Tekrar oyna** ve **Lobiye dön** çıkar.
+- Ayarlar (ev sahibi): tur sayısı 1 / 3 / 5, tahta 8 ya da 10 satır (varsayılan 10), Bak süresi kaydırıcıyla 1-20 saniye (varsayılan 5). Sonda kazanan, **Tekrar oyna** ve **Lobiye dön** çıkar.
 - Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Gizli Yol seçilemez.
 - Eski odalar: eski kurallı (komşu kareli yol, "kısa/uzun" ayarı) bir oda lobideyse sessizce yeni kurallara geçer, eski ayar silinip yenisi varsayılan olur. Oyun ortasındaki eski bir odada hata mesajı çıkar, ev sahibi **Lobiye dön**'e basınca yeni kurallarla devam edilir.
 - Bilinen sınır: yollar oda satırında durur (durum herkese açıktır); ekran Bak süresi dışında rakibin yolunu çizmez.

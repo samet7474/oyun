@@ -1,7 +1,8 @@
 // "Gizli Yol" motoru ve oyun yönlendirici testleri. Çalıştır: node test/gizliyol-test.js
 import assert from 'node:assert/strict';
 import {
-  BAKMA_SURELERI,
+  EN_AZ_BAKMA_SURESI,
+  EN_COK_BAKMA_SURESI,
   PES_HATASI,
   SATIR_SAYILARI,
   TUR_SAYILARI,
@@ -219,15 +220,16 @@ test('katılma: aynı kişi iki kez eklenmez, aynı ad ayrılır, başlayan oyun
   assert.match(hatali(u(baslamis, { tip: 'katil', id: pid(5), ad: 'Cem' })), /başladı/);
 });
 
-test('ayarlar: satır sayısı 8 ya da 10, süre 3/5/10/15, tur 1/3/5', () => {
+test('ayarlar: satır sayısı 8 ya da 10, süre 1-20 sn, tur 1/3/5', () => {
   assert.deepEqual(SATIR_SAYILARI, [8, 10]);
-  assert.deepEqual(BAKMA_SURELERI, [3, 5, 10, 15]);
+  assert.equal(EN_AZ_BAKMA_SURESI, 1);
+  assert.equal(EN_COK_BAKMA_SURESI, 20);
   assert.deepEqual(TUR_SAYILARI, [1, 3, 5]);
   let d = lobi();
   d = basarili(u(d, { tip: 'ayarla', id: pid(0), ayar: { satirSayisi: 8 } }));
   assert.equal(d.ayar.satirSayisi, 8);
   assert.equal(d.ayar.bakmaSuresi, 5);
-  for (const sure of BAKMA_SURELERI) {
+  for (const sure of [1, 3, 7, 12, 20]) {
     d = basarili(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: sure } }));
     assert.equal(d.ayar.bakmaSuresi, sure);
   }
@@ -241,8 +243,10 @@ test('ayarlar: yalnız ev sahibi ve lobide, geçersiz değer reddedilir', () => 
   assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 4 } })), /tur/i);
   assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { satirSayisi: 9 } })), /satır/i);
   assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { satirSayisi: 12 } })), /satır/i);
-  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: 7 } })), /süre/i);
-  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: 20 } })), /süre/i);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: 0 } })), /süre/i);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: 2.5 } })), /süre/i);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: '5' } })), /süre/i);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: 21 } })), /süre/i);
   const oyunda = baslat();
   assert.match(hatali(u(oyunda, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 5 } })), /başlamadan/);
 });
@@ -385,7 +389,7 @@ test('bak: yanlış tahmin de hakkı yakar', () => {
 });
 
 test('bak: baktıktan sonra tahmin yapılabilir, süre ayarı değerleri hepsi kabul edilir', () => {
-  for (const sure of BAKMA_SURELERI) {
+  for (const sure of [1, 5, 20]) {
     let d = bulmada({ bakmaSuresi: sure });
     assert.equal(d.ayar.bakmaSuresi, sure);
     d = basarili(bak(d, 0, 5));

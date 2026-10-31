@@ -2666,6 +2666,35 @@ button {
 /* Gizli Yol                                                           */
 /* ------------------------------------------------------------------ */
 
+/* Bak süresi kaydırıcısı (ses ayarı gibi) */
+.gy-kaydirici-satir {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 6px 0 4px;
+}
+
+.gy-kaydirici {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  accent-color: var(--vurgu);
+  cursor: pointer;
+}
+
+.gy-kaydirici:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.gy-kaydirici-deger {
+  min-width: 56px;
+  text-align: right;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--vurgu);
+}
+
 .gy-sayfa {
   flex: 1;
   display: flex;
