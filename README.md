@@ -1,13 +1,13 @@
 # Oyun Masası
 
-Arkadaşlar kendi telefonundan aynı linki açıp beş oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu**, **Aynı Kafa** ve **Gizli Yol**.
+Arkadaşlar kendi telefonundan aynı linki açıp altı oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol** ve **Gizli Görev**.
 Sunucu kodu yok: her hamle tarayıcıda hesaplanır ve Supabase tablosuna (`oyun_odalari`) yazılır.
 GitHub Pages'te çalışır, derleme gerekmez.
 
 ## Nasıl oynanır
 1. Adını yaz, **Oda kur**'a bas. Oda UNO olarak açılır.
 2. Çıkan linki ya da 4 harfli kodu arkadaşına gönder. O da adını yazıp **Katıl**'a basar.
-3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu**, **Aynı Kafa** ya da **Gizli Yol**), ayarları yapar ve **Oyunu başlat**'a basar.
+3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol** ya da **Gizli Görev**), ayarları yapar ve **Oyunu başlat**'a basar.
    Oyun yalnız lobide değişir; oyun bitince **Lobiye dön** ile lobiye inilir.
 
 ### UNO
@@ -73,6 +73,23 @@ Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6x6 karedir. Herkes gizli 
 - Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Gizli Yol seçilemez.
 - Bilinen sınır: yollar oda satırında durur (durum herkese açıktır); ekran bulma bitene kadar rakibin yolunu çizmez.
 
+### Gizli Görev
+İki ile dört kişi. Oyun ekranın dışında, konuşurken ya da mesajlaşırken oynanır; site görevleri dağıtır, puanı ve onayları tutar.
+- Herkesin elinde 3 gizli görev durur: bir **kolay** (1 puan), bir **orta** (2 puan), bir **zor** (3 puan).
+- Görevini yaptığını düşünen o görevde **Yaptım**'a basar. Diğerlerinin ekranının üstünde "<Ad> şu görevi yaptığını söylüyor: ... Oldu mu?" kartı çıkar
+  (**Oldu** / **Olmadı**). 2 kişide rakibin cevabı belirler; 3-4 kişide çoğunluk karar verir, eşitlikte kabul edilir.
+  Kabul edilirse puan gelir ve desteden aynı zorlukta yeni görev çekilir. Reddedilirse görev kalır. Onay beklerken aynı görev için tekrar basılamaz.
+- **Yakaladım:** biri bir rakibin görev yapmaya çalıştığını fark ederse kimden şüphelendiğini seçer ve tahminini yazar (en fazla 60 harf).
+  Şüphelenilenin ekranında tahmin ve kendi görevleri çıkar: **Evet, bu görevimdi** (görevi seçer) ya da **Hayır**.
+  Evetse yakalayan 1 puan alır, görev yanar (puansız) ve yenisi gelir. Her oyuncunun oyun başına 3 yakalama hakkı var; her tahmin bir hak harcar.
+- Her oyuncunun oyun başına 1 **Değiştir** hakkı var (görevi aynı zorlukta yenisiyle değiştirir; onay beklerken değişmez).
+- Ayarlar (ev sahibi): oyun hedef puanla (10 / 15 / 20, önce ulaşan kazanır) ya da süreyle (15 / 30 / 60 dakika, en çok puan kazanır) biter.
+  Süre başlangıç anından sayılır, ekranda geri sayım görünür; süre bitince ilk hamle yapan telefon oyunu bitirir. Ev sahibi her an **Oyunu bitir** diyebilir.
+- Sonda puan tablosu ve herkesin tamamladığı görevler açılır (oyun bitene kadar başkasının görevleri görünmez). Ev sahibi **Tekrar oyna** ya da **Lobiye dön** der.
+- Dağıtılan görevler desteden çıkar, deste bitince karışıp yeniden dolar; iki oyuncunun elinde aynı görev olmaz. Tekrar oynamada önce görülmemiş görevler gelir.
+- Görev bankası `gorev-gorevler.js` içindedir (124 görev: 40 kolay, 42 orta, 42 zor).
+- Bilinen sınır: görevler oda satırında durur (durum herkese açıktır); ekran başkasının görevini göstermez. Süre her telefonun saatine göre sayılır.
+
 Aynı tarayıcıdan aynı linke dönersen koltuğuna otursun diye kimliğin tarayıcıda saklanır.
 
 ## Testleri çalıştırma
@@ -82,26 +99,31 @@ node test/tanis-test.js
 node test/kelime-test.js
 node test/aynikafa-test.js
 node test/gizliyol-test.js
+node test/gorev-test.js
 ```
 `tanis-test.js` "Beni ne kadar tanıyorsun" motorunu ve oyun yönlendiriciyi (`oyunlar.js`) sınar.
 `kelime-test.js` "Kelime düellosu" motorunu (renklendirme, Türkçe harfler, tur akışı, çakışma) ve yönlendiriciyi sınar;
 kendi küçük kelime listesini kullanır.
 `aynikafa-test.js` "Aynı Kafa" motorunu (Türkçe karşılaştırma, puanlama, aynı sayılsın oyu, uyum, ipucu tekrarı) ve yönlendiriciyi sınar.
 `gizliyol-test.js` "Gizli Yol" motorunu (yol kuralları, doğru ve yanlış adım, başa dönme, kalıcı işaret, pes, tur ve oyun sonu, beraberlik) ve yönlendiriciyi sınar.
+`gorev-test.js` "Gizli Görev" motorunu (dağıtım, onay ve çoğunluk, yakalama, değiştirme hakkı, hedef puan ve süre bitişi, gizlilik yardımcıları) ve yönlendiriciyi sınar.
 Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
 - `index.html`: sayfa iskeleti, Supabase betiği
-- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi temayla açılır
+- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın temayla açılır
 - `app.js`: ekranlar, UNO masası, Supabase senkronu
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
 - `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
 - `aynikafa-ekran.js`: "Aynı Kafa" ekranları (lobi ayarları, ipucu ve cevap, açılış kartları, oylar, sonuç)
 - `gizliyol-ekran.js`: "Gizli Yol" ekranları (lobi ayarları, yol çizme, bulma tahtası, rakip ilerlemesi, açık yollar, sonuç)
+- `gorev-ekran.js`: "Gizli Görev" ekranları (lobi ayarları, görev kartları, onay ve yakalama soruları, puan tablosu, geri sayım, sonuç)
 - `oyunlar.js`: oyun yönlendirici; hareketi `durum.oyun`'a göre doğru motora verir, oyun seçimini (`oyunSec`) yapar
 - `uno.js`: UNO kuralları (saf motor, DOM ve ağ yok)
 - `gizliyol.js`: Gizli Yol kuralları (saf motor, DOM ve ağ yok)
 - `tanis.js`: "Beni ne kadar tanıyorsun" kuralları (saf motor, DOM ve ağ yok)
+- `gorev.js`: Gizli Görev kuralları (saf motor, DOM ve ağ yok)
+- `gorev-gorevler.js`: Gizli Görev görev bankası
 - `kelime.js`: "Kelime düellosu" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa.js`: "Aynı Kafa" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa-ipuclari.js`: "Aynı Kafa" ipucu bankası
@@ -113,6 +135,7 @@ Hata varsa çıkış kodu 1 olur.
 - `test/kelime-test.js`: kelime düellosu motoru ve yönlendirici testleri
 - `test/aynikafa-test.js`: Aynı Kafa motoru ve yönlendirici testleri
 - `test/gizliyol-test.js`: Gizli Yol motoru ve yönlendirici testleri
+- `test/gorev-test.js`: Gizli Görev motoru ve yönlendirici testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar

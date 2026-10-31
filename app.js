@@ -1,8 +1,8 @@
 // app.js - Ekranlar, çizim ve Supabase senkronu.
-// Oyun kuralları uno.js, tanis.js, kelime.js, aynikafa.js ve gizliyol.js içindedir, hareketler oyunlar.js üzerinden geçer;
+// Oyun kuralları uno.js, tanis.js, kelime.js, aynikafa.js, gizliyol.js ve gorev.js içindedir, hareketler oyunlar.js üzerinden geçer;
 // burada sadece göstermek ve eşitlemek var. "Beni ne kadar tanıyorsun" ekranları tanis-ekran.js'te,
 // "Kelime düellosu" ekranları kelime-ekran.js'te, "Aynı Kafa" ekranları aynikafa-ekran.js'te,
-// "Gizli Yol" ekranları gizliyol-ekran.js'te.
+// "Gizli Yol" ekranları gizliyol-ekran.js'te, "Gizli Görev" ekranları gorev-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { uygula, oyunId, oyunBilinir, OYUNLAR } from './oyunlar.js';
@@ -10,6 +10,8 @@ import { tanisEkraniKur } from './tanis-ekran.js';
 import { kelimeEkraniKur } from './kelime-ekran.js';
 import { aynikafaEkraniKur } from './aynikafa-ekran.js';
 import { gizliyolEkraniKur } from './gizliyol-ekran.js';
+import { gorevEkraniKur } from './gorev-ekran.js';
+import { bekleyenSoruVarMi } from './gorev.js';
 import {
   yeniOda,
   atilabilirlik,
@@ -133,6 +135,17 @@ const aynikafaEkran = aynikafaEkraniKur({
 
 // "Gizli Yol" ekranları
 const gizliyolEkran = gizliyolEkraniKur({
+  el: el,
+  istemci: istemci,
+  hamle: hamle,
+  mesajGoster: mesajGoster,
+  render: render,
+  benimIndeks: benimIndeks,
+  ustCubuk: ustCubuk,
+});
+
+// "Gizli Görev" ekranları
+const gorevEkran = gorevEkraniKur({
   el: el,
   istemci: istemci,
   hamle: hamle,
@@ -364,6 +377,7 @@ function odaBaglan(kod, satir) {
   kelimeEkran.sifirla();
   aynikafaEkran.sifirla();
   gizliyolEkran.sifirla();
+  gorevEkran.sifirla();
   try {
     history.replaceState(null, '', '#' + kod);
   } catch (hata) {
@@ -511,6 +525,7 @@ async function odadanCik() {
   kelimeEkran.sifirla();
   aynikafaEkran.sifirla();
   gizliyolEkran.sifirla();
+  gorevEkran.sifirla();
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch (hata) {
@@ -568,6 +583,9 @@ function benimSiramMi(d) {
   }
   if (d.oyun === 'gizliyol') {
     return false; // sıra yok, herkes aynı anda oynar
+  }
+  if (d.oyun === 'gorev') {
+    return bekleyenSoruVarMi(d, idx); // onay ya da yakalama sorusu bana geldi
   }
   return d.asama === 'oyun' && d.sira === idx;
 }
@@ -909,7 +927,7 @@ function ustCubuk() {
           {
             class: 'link-dugme',
             onclick: () => {
-              if (d.asama === 'bitti' && (d.oyun === 'tanis' || d.oyun === 'kelime' || d.oyun === 'aynikafa' || d.oyun === 'gizliyol')) {
+              if (d.asama === 'bitti' && ['tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev'].includes(d.oyun)) {
                 hamle({ tip: 'yeniOyun' });
               } else if (window.confirm('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?')) {
                 hamle({ tip: 'yeniOyun' });
@@ -1070,6 +1088,9 @@ function oyunBolumu(d, sahipMi) {
   }
   if (oyun === 'gizliyol') {
     return gizliyolEkran.lobiBolumu(d, sahipMi);
+  }
+  if (oyun === 'gorev') {
+    return gorevEkran.lobiBolumu(d, sahipMi);
   }
   return unoLobiBolumu(d, sahipMi);
 }
@@ -1464,19 +1485,20 @@ function elSonuKatmani(d, ben) {
 // ---------------------------------------------------------------------------
 
 // Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül, "Kelime düellosu" koyu ardıç,
-// "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi
+// "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın
 const TEMA_RENKLERI = {
   uno: '#0c2f26',
   tanis: '#241437',
   kelime: '#0f1c22',
   aynikafa: '#3a1812',
   gizliyol: '#0a1428',
+  gorev: '#17181d',
 };
 
 function temaUygula(d) {
   const oyun = istemci.kod && d ? oyunId(d) : 'uno';
   const sayfaKoku = document.documentElement;
-  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa' || oyun === 'gizliyol') {
+  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa' || oyun === 'gizliyol' || oyun === 'gorev') {
     sayfaKoku.setAttribute('data-tema', oyun);
   } else {
     sayfaKoku.removeAttribute('data-tema');
@@ -1500,6 +1522,11 @@ function render() {
   // "Aynı Kafa"da cevap yazarken gelen güncelleme yazı kutusunu bozmasın
   if (istemci.kod && ben >= 0 && aynikafaEkran.yazimSurerken(d)) {
     aynikafaEkran.esitle(d, ben);
+    return;
+  }
+
+  // "Gizli Görev"de tahmin yazarken gelen güncelleme yazı kutusunu bozmasın
+  if (istemci.kod && ben >= 0 && gorevEkran.yazimSurerken(d, ben)) {
     return;
   }
 
@@ -1553,6 +1580,11 @@ function render() {
 
   if (oyunId(d) === 'gizliyol') {
     kok.append(...gizliyolEkran.sayfa(d, ben));
+    return;
+  }
+
+  if (oyunId(d) === 'gorev') {
+    kok.append(...gorevEkran.sayfa(d, ben));
     return;
   }
 

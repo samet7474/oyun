@@ -9,6 +9,7 @@ import * as tanis from './tanis.js';
 import * as kelime from './kelime.js';
 import * as aynikafa from './aynikafa.js';
 import * as gizliyol from './gizliyol.js';
+import * as gorev from './gorev.js';
 
 export const OYUNLAR = [
   { id: 'uno', ad: 'UNO' },
@@ -16,6 +17,7 @@ export const OYUNLAR = [
   { id: 'kelime', ad: 'Kelime düellosu' },
   { id: 'aynikafa', ad: 'Aynı Kafa' },
   { id: 'gizliyol', ad: 'Gizli Yol' },
+  { id: 'gorev', ad: 'Gizli Görev' },
 ];
 
 export function oyunBilinir(id) {
@@ -44,6 +46,9 @@ export function yeniOda(sahipId, sahipAd, oyun = 'uno') {
   if (oyun === 'gizliyol') {
     return gizliyol.yeniOda(sahipId, sahipAd);
   }
+  if (oyun === 'gorev') {
+    return gorev.yeniOda(sahipId, sahipAd);
+  }
   return uno.yeniOda(sahipId, sahipAd);
 }
 
@@ -61,6 +66,9 @@ function lobiyiDegistir(durum, oyun) {
   }
   if (oyun === 'gizliyol') {
     return gizliyol.lobiKur(oyuncular, durum.sahip);
+  }
+  if (oyun === 'gorev') {
+    return gorev.lobiKur(oyuncular, durum.sahip);
   }
   const ilk = oyuncular[0];
   let yeni = uno.yeniOda(ilk.id, ilk.ad);
@@ -105,13 +113,16 @@ function oyunSec(durum, eylem) {
 // banka: yalnız "Beni ne kadar tanıyorsun" için soru bankası (testler küçük bir banka verir).
 // kelimeListesi: yalnız "Kelime düellosu" için { cevaplar, gecerli } (testler küçük bir liste verir).
 // ipuclari: yalnız "Aynı Kafa" için ipucu dizisi (testler küçük bir liste verir).
+// gorevler, simdi: yalnız "Gizli Görev" için görev listesi ve şimdiki zaman (ms); testler sabitler.
 export function uygula(
   durum,
   eylem,
   rastgele = Math.random,
   banka = undefined,
   kelimeListesi = undefined,
-  ipuclari = undefined
+  ipuclari = undefined,
+  gorevler = undefined,
+  simdi = undefined
 ) {
   if (eylem && eylem.tip === 'oyunSec') {
     return oyunSec(durum, eylem);
@@ -128,6 +139,9 @@ export function uygula(
   }
   if (oyun === 'gizliyol') {
     return gizliyol.uygula(durum, eylem, rastgele);
+  }
+  if (oyun === 'gorev') {
+    return gorev.uygula(durum, eylem, rastgele, gorevler, simdi);
   }
   if (oyun === 'uno') {
     return uno.uygula(durum, eylem, rastgele);

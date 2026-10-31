@@ -77,6 +77,19 @@
   --kotu: #ff6b6b;
 }
 
+/* "Gizli Görev" odasında casus filmi gibi koyu antrasit masa, altın sarısı vurgu */
+:root[data-tema='gorev'] {
+  --bg: #17181d;
+  --bg-ust: #2b2d36;
+  --panel: rgba(0, 0, 0, 0.32);
+  --panel-acik: rgba(255, 255, 255, 0.08);
+  --yazi: #f1eee4;
+  --yazi-soluk: #a8a69c;
+  --vurgu: #e6b422;
+  --iyi: #5ed38b;
+  --kotu: #ff6b6b;
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -1190,6 +1203,11 @@ button {
 .secenekler.oyun-secici .secenek[data-oyun='aynikafa'] {
   flex: 1 1 100%;
   order: 4;
+}
+
+.secenekler.oyun-secici .secenek[data-oyun='gorev'] {
+  flex: 1 1 100%;
+  order: 6;
 }
 
 .secenekler.oyun-secici .secenek[data-oyun='gizliyol'] {
@@ -2831,4 +2849,312 @@ button {
 .gy-ozet .hata.kazanan {
   background: #1f9d58;
   color: #fff;
+}
+
+/* ------------------------------------------------------------------ */
+/* Gizli Görev                                                         */
+/* ------------------------------------------------------------------ */
+
+.gv-sayfa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 16px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.gv-ust {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid rgba(230, 180, 34, 0.35);
+  font-weight: 800;
+}
+
+.gv-sure,
+.gv-hedef {
+  color: var(--vurgu);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gv-baslik {
+  margin: 4px 0 0;
+  font-size: 17px;
+  color: var(--vurgu);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Onay ve yakalama soruları: ekranın en üstünde parlayan kart */
+.gv-soru {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #2a2411;
+  border: 2px solid var(--vurgu);
+  box-shadow: 0 0 0 4px rgba(230, 180, 34, 0.15), 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: gv-gel 0.3s ease-out both;
+}
+
+.gv-soru.yakala {
+  background: #2a1a1a;
+  border-color: var(--kotu);
+  box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.15), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.gv-soru-yazi {
+  margin: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.gv-tahmin-yazi {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.gv-secim {
+  height: auto;
+  text-align: left;
+  justify-content: flex-start;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+@keyframes gv-gel {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Puan tablosu */
+.gv-tablo {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gv-satir {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  font-weight: 700;
+}
+
+.gv-satir.ben {
+  border: 1px solid rgba(230, 180, 34, 0.5);
+}
+
+.gv-satir .ad {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gv-satir .gorev-sayisi {
+  flex: none;
+  color: var(--yazi-soluk);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.gv-satir .puan {
+  flex: none;
+  min-width: 44px;
+  text-align: right;
+  color: var(--vurgu);
+  font-size: 18px;
+}
+
+/* Görev kartları */
+.gv-gorevler {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gv-gorev {
+  --zr: #5ec48a;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px 14px 18px;
+  border-radius: 16px;
+  background: var(--panel-acik);
+  border-left: 6px solid var(--zr);
+}
+
+.gv-gorev.kolay {
+  --zr: #5ec48a;
+}
+
+.gv-gorev.orta {
+  --zr: #f0b429;
+}
+
+.gv-gorev.zor {
+  --zr: #ff6b81;
+}
+
+.gv-gorev.bos {
+  opacity: 0.6;
+}
+
+.gv-gorev-metin {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.gv-etiket {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--zr, #5ec48a);
+  color: #1a1a1a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.gv-etiket.kolay {
+  --zr: #5ec48a;
+}
+
+.gv-etiket.orta {
+  --zr: #f0b429;
+}
+
+.gv-etiket.zor {
+  --zr: #ff6b81;
+}
+
+.gv-bekliyor {
+  margin: 0;
+  color: var(--vurgu);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gv-gorev-dugmeler {
+  display: flex;
+  gap: 10px;
+}
+
+.gv-gorev-dugmeler .gv-yaptim {
+  flex: 2;
+}
+
+.gv-gorev-dugmeler .gv-degistir {
+  flex: 1;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.gv-yakala-panel .secenekler {
+  flex-wrap: wrap;
+}
+
+.gv-haberler ul,
+.gv-yapilanlar ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gv-haberler li {
+  color: var(--yazi-soluk);
+  font-size: 14px;
+}
+
+.gv-yapilanlar li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.gv-yapilanlar .gv-etiket {
+  flex: none;
+}
+
+.gv-nasil {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 15px;
+}
+
+.gv-nasil summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.gv-nasil ul {
+  margin: 6px 0 2px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--yazi-soluk);
+}
+
+.gv-kazanan {
+  padding: 22px 16px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, #3a3318, #1f1d12);
+  border: 2px solid var(--vurgu);
+  text-align: center;
+}
+
+.gv-kazanan .ad {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--vurgu);
+  overflow-wrap: anywhere;
+}
+
+.gv-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gv-soru {
+    animation: none;
+  }
 }
