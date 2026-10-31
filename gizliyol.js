@@ -1,26 +1,28 @@
-// gizliyol.js - Saf "Gizli Yol" motoru (tam 2 kişi, aynı anda oynanan yol bulmaca).
+// gizliyol.js - Saf "Gizli Yol" motoru (tam 2 kişi, aynı anda oynanan hafıza ve zekâ oyunu).
 // DOM yok, Supabase yok. Durum girer, yeni durum çıkar (girdi hiç değişmez).
 //
 // Kullanım:
-//   const sonuc = uygula(durum, { tip: 'kare', id: oyuncuId, tur: 0, satir: 5, sutun: 2 }, rastgele);
+//   const sonuc = uygula(durum, { tip: 'kare', id: oyuncuId, tur: 0, satir: 9, sutun: 2 }, rastgele);
 //   sonuc.ok === true  -> sonuc.durum yeni durumdur
 //   sonuc.ok === false -> sonuc.hata kısa bir Türkçe mesajdır
 //
-// Oyun: 6x6 tahta. Her oyuncu gizli bir yol çizer (alttan üste). Sonra aynı anda
-// birbirinin yolunu bulmaya çalışır. Yanlış karede oyuncu başa döner, kırmızı işaret kalır.
-// Az hata yapan turu alır.
+// Oyun: Tahta 6 sütun, 8 ya da 10 satırdır (ayar). Her oyuncu her satırdan tam bir kutu seçer:
+// bu onun gizli yoludur. Sonra herkes rakibin yolunu alttan yukarı bulmaya çalışır.
+// Çözmeye başlamadan önce bir kez "Bak" ile rakibin yolunu ayardaki süre kadar görebilir.
+// Yanlış kutu kalıcı çarpı olur, hata +1, oyuncu aynı satırda devam eder. Az hata yapan turu alır.
 //
-// Konum: satir 0 = üst satır, satir 5 = alt satır; sutun 0..5. Kare [satir, sutun] diye yazılır.
+// Konum: satir 0 = üst satır, satir (satirSayisi - 1) = alt satır; sutun 0..5.
+// Yol, satır sırasıyla sütun numaralarının listesidir: yol[satir] = sutun (uzunluğu satirSayisi).
 // Rastgelelik bu oyunda yok; imza diğer oyunlarla aynı kalsın diye parametre duruyor.
 //
 // Aşamalar: lobi -> kurma -> bulma -> acik -> (kurma -> bulma -> acik) ... -> bitti
-//   kurma : herkes kendi yolunu çiziyor, "Hazırım" bekleniyor
+//   kurma : herkes kendi yolunu seçiyor, "Hazırım" bekleniyor
 //   bulma : herkes rakibin yolunu arıyor (sıra yok)
 //   acik  : iki yol da açık, tur sonucu
 //   bitti : son turdan sonra özet
 //
-// Yollar durumda tutulur (durum satırı herkese açıktır, bilinen sınır): ekran bulma bitene
-// kadar rakibin yolunu hiçbir yerde çizmez.
+// Yollar durumda tutulur (durum satırı herkese açıktır, bilinen sınır): ekran, Bak süresi dışında
+// rakibin yolunu hiçbir yerde çizmez.
 
 import { oyuncuIndeks, temizAd, benzersizAd } from './uno.js';
 
@@ -28,113 +30,101 @@ import { oyuncuIndeks, temizAd, benzersizAd } from './uno.js';
 // Sabitler
 // ---------------------------------------------------------------------------
 
-export const TAHTA = 6;
-export const ALT_SATIR = TAHTA - 1;
-export const UST_SATIR = 0;
+export const SUTUN_SAYISI = 6;
+
+export const SATIR_SAYILARI = [8, 10];
+export const VARSAYILAN_SATIR_SAYISI = 10;
+
+// Bak süresi (saniye)
+export const BAKMA_SURELERI = [3, 5, 10, 15];
+export const VARSAYILAN_BAKMA_SURESI = 5;
 
 export const OYUNCU_SAYISI = 2;
 
 export const TUR_SAYILARI = [1, 3, 5];
 export const VARSAYILAN_TUR_SAYISI = 3;
 
-// Yolun kare sayısı bir aralıktadır: kısa 8-10, uzun 12-14.
-// Ayarda aralığın alt sınırı saklanır (enAzKare); üst sınır ondan bulunur.
-export const YOL_UZUNLUKLARI = [8, 12];
-export const VARSAYILAN_YOL_UZUNLUK = 8;
-const YOL_ARALIGI_GENISLIK = 2; // alt sınırdan üst sınıra fark
-
-// Eski odalarda kayıtlı ayar değeri ("kısa", "uzun" ya da herhangi bir sayı)
-// yeni aralıklardan birine eşlenir. Bilinmeyen değer varsayılan olur.
-export function yolAyariniDuzelt(deger) {
-  if (YOL_UZUNLUKLARI.includes(deger)) {
-    return deger;
-  }
-  if (typeof deger === 'string') {
-    const kucuk = deger.toLocaleLowerCase('tr');
-    if (kucuk === 'uzun') {
-      return YOL_UZUNLUKLARI[1];
-    }
-    if (kucuk === 'kısa' || kucuk === 'kisa') {
-      return YOL_UZUNLUKLARI[0];
-    }
-    deger = Number(deger);
-  }
-  if (typeof deger === 'number' && Number.isFinite(deger)) {
-    // Kısa aralığın üstündeki sayılar (11 ve üzeri) uzun sayılır
-    return deger > YOL_UZUNLUKLARI[0] + YOL_ARALIGI_GENISLIK ? YOL_UZUNLUKLARI[1] : YOL_UZUNLUKLARI[0];
-  }
-  return VARSAYILAN_YOL_UZUNLUK;
-}
-
-// Ayardaki değerden yolun en az kare sayısı (kısa 8, uzun 12)
-export function yolEnAz(ayarDegeri) {
-  return yolAyariniDuzelt(ayarDegeri);
-}
-
-// Ayardaki değerden yolun en çok kare sayısı (kısa 10, uzun 14)
-export function yolEnCok(ayarDegeri) {
-  return yolAyariniDuzelt(ayarDegeri) + YOL_ARALIGI_GENISLIK;
-}
-
 // Bu kadar hataya ulaşan oyuncu pes edebilir. Pes edince tur bu kadar hata sayılır.
 export const PES_HATASI = 25;
 
+// Yeni kurallı odaların işareti. Bu işaret yoksa oda eski (komşu kareli yol) biçimindedir.
+export const KURAL = 'satir';
+
 // ---------------------------------------------------------------------------
-// Kare ve yol yardımcıları
+// Ayar ve eski oda yardımcıları
+// ---------------------------------------------------------------------------
+
+// Oda eski biçimde mi? (eski ayar enAzKare ve kare listesi yolları)
+export function eskiDurumMu(d) {
+  return Boolean(d) && d.kural !== KURAL;
+}
+
+// Ayardan satır sayısı (geçersizse varsayılan)
+export function satirSayisiOku(d) {
+  const deger = d && d.ayar ? d.ayar.satirSayisi : undefined;
+  return SATIR_SAYILARI.includes(deger) ? deger : VARSAYILAN_SATIR_SAYISI;
+}
+
+// Ayardan Bak süresi (geçersizse varsayılan)
+export function bakmaSuresiOku(d) {
+  const deger = d && d.ayar ? d.ayar.bakmaSuresi : undefined;
+  return BAKMA_SURELERI.includes(deger) ? deger : VARSAYILAN_BAKMA_SURESI;
+}
+
+// Ayardan tur sayısı (geçersizse varsayılan)
+export function turSayisiOku(d) {
+  const deger = d && d.ayar ? d.ayar.turSayisi : undefined;
+  return TUR_SAYILARI.includes(deger) ? deger : VARSAYILAN_TUR_SAYISI;
+}
+
+// Eski bir odayı yeni kurallara çevirir: eski ayar silinir, yenisi varsayılan olur, tur sayısı kalır.
+function kuraliYenile(d) {
+  d.kural = KURAL;
+  d.ayar = {
+    turSayisi: turSayisiOku(d),
+    satirSayisi: VARSAYILAN_SATIR_SAYISI,
+    bakmaSuresi: VARSAYILAN_BAKMA_SURESI,
+  };
+  d.tur = 0;
+  d.yollar = [];
+  d.hazir = [];
+  d.bulma = [];
+  d.gecmis = [];
+}
+
+// ---------------------------------------------------------------------------
+// Kutu ve yol yardımcıları
 // ---------------------------------------------------------------------------
 
 function tamSayiMi(x) {
   return Number.isInteger(x);
 }
 
-// Tahtanın içinde mi?
-export function karedeMi(satir, sutun) {
-  return tamSayiMi(satir) && tamSayiMi(sutun) && satir >= 0 && satir < TAHTA && sutun >= 0 && sutun < TAHTA;
+export function sutundaMi(sutun) {
+  return tamSayiMi(sutun) && sutun >= 0 && sutun < SUTUN_SAYISI;
 }
 
-// İki kare yan yana ya da alt alta komşu mu? (çapraz yok)
-export function komsuMu(a, b) {
-  const fark = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
-  return fark === 1;
+// Tahtanın içinde mi?
+export function karedeMi(satir, sutun, satirSayisi = VARSAYILAN_SATIR_SAYISI) {
+  return tamSayiMi(satir) && satir >= 0 && satir < satirSayisi && sutundaMi(sutun);
 }
 
 export function kareAnahtari(satir, sutun) {
   return satir + ',' + sutun;
 }
 
-// Yol geçerli mi? Hata mesajı ya da null.
-export function yolHatasi(yol, ayarDegeri = VARSAYILAN_YOL_UZUNLUK) {
-  const enAz = yolEnAz(ayarDegeri);
-  const enCok = yolEnCok(ayarDegeri);
-  if (!Array.isArray(yol) || yol.length === 0) {
-    return 'Önce bir yol çiz.';
+// Yol geçerli mi? Hata mesajı ya da null. Her satırdan tam bir kutu seçilmeli.
+export function yolHatasi(yol, satirSayisi = VARSAYILAN_SATIR_SAYISI) {
+  if (!Array.isArray(yol)) {
+    return 'Önce her satırdan bir kutu seç.';
   }
-  const gorulen = new Set();
-  for (let i = 0; i < yol.length; i++) {
-    const kare = yol[i];
-    if (!Array.isArray(kare) || kare.length !== 2 || !karedeMi(kare[0], kare[1])) {
-      return 'Yol tahtanın dışına çıkıyor.';
+  if (yol.length !== satirSayisi) {
+    return 'Her satırdan bir kutu seçmelisin (' + satirSayisi + ' satır).';
+  }
+  for (let s = 0; s < yol.length; s++) {
+    if (!sutundaMi(yol[s])) {
+      return 'Her satırdan bir kutu seçmelisin.';
     }
-    const anahtar = kareAnahtari(kare[0], kare[1]);
-    if (gorulen.has(anahtar)) {
-      return 'Aynı kareden iki kez geçilmez.';
-    }
-    gorulen.add(anahtar);
-    if (i > 0 && !komsuMu(yol[i - 1], kare)) {
-      return 'Her adım yan yana ya da alt alta olmalı.';
-    }
-  }
-  if (yol.length > enCok) {
-    return 'Yol en fazla ' + enCok + ' kare olabilir.';
-  }
-  if (yol[0][0] !== ALT_SATIR) {
-    return 'Yol alt satırdan başlamalı.';
-  }
-  if (yol[yol.length - 1][0] !== UST_SATIR) {
-    return 'Yol üst satırda bitmeli.';
-  }
-  if (yol.length < enAz) {
-    return 'Yol en az ' + enAz + ' kare olmalı.';
   }
   return null;
 }
@@ -150,9 +140,12 @@ function yeniOyuncu(id, ad) {
 // Bir oyuncunun bulma ilerlemesi (rakibin yolunu arıyor)
 function bosIlerleme() {
   return {
-    bulunan: 0, // şu an doğru bulunan kare sayısı (hata yapınca 0'a döner)
+    bulunan: 0, // doğru bulunan satır sayısı (alttan sayılır)
     hata: 0, // bu turdaki hata sayısı
-    yanlislar: [], // kalıcı kırmızı işaretler: { satir, sutun, adim }
+    yanlislar: [], // kalıcı kırmızı işaretler: { satir, sutun }
+    bakti: false, // Bak hakkını kullandı mı
+    bakmaZamani: null, // Bak'a basılan an (ms, o oyuncunun saati)
+    tahminYapti: false, // en az bir tahmin yaptı mı (Bak hakkı yanar)
     bitti: false,
     pes: false,
   };
@@ -162,15 +155,17 @@ function bosIlerleme() {
 export function lobiKur(oyuncular, sahipId) {
   return {
     oyun: 'gizliyol',
+    kural: KURAL,
     asama: 'lobi', // lobi | kurma | bulma | acik | bitti
     sahip: sahipId,
     ayar: {
       turSayisi: VARSAYILAN_TUR_SAYISI,
-      enAzKare: VARSAYILAN_YOL_UZUNLUK,
+      satirSayisi: VARSAYILAN_SATIR_SAYISI,
+      bakmaSuresi: VARSAYILAN_BAKMA_SURESI,
     },
     oyuncular: oyuncular.map((o) => yeniOyuncu(o.id, o.ad)),
     tur: 0, // şu anki turun indeksi
-    yollar: [], // oyuncu i'nin kendi çizdiği yol: [[satir, sutun], ...] ya da null
+    yollar: [], // oyuncu i'nin kendi seçtiği yol: [sutun, ...] ya da null
     hazir: [], // oyuncu i yolunu "Hazırım" ile onayladı mı
     bulma: [], // oyuncu i'nin, rakibin yolunu arama ilerlemesi
     gecmis: [], // biten turlar: { hatalar: [a, b], kazanan: indeks | -1 }
@@ -190,12 +185,6 @@ export function rakipIndeks(i) {
   return 1 - i;
 }
 
-// i. oyuncunun bulduğu yolun uzunluğu (rakibin yolunun kare sayısı)
-export function hedefUzunluk(d, i) {
-  const yol = d.yollar[rakipIndeks(i)];
-  return yol ? yol.length : 0;
-}
-
 // Bir oyuncunun bu turdaki durumu
 export function oyuncuDurumu(d, i) {
   const ilerleme = (d.bulma && d.bulma[i]) || bosIlerleme();
@@ -204,8 +193,21 @@ export function oyuncuDurumu(d, i) {
     hata: ilerleme.hata,
     bitti: ilerleme.bitti,
     pes: ilerleme.pes,
+    bakti: ilerleme.bakti,
+    bakmaZamani: ilerleme.bakmaZamani,
+    tahminYapti: ilerleme.tahminYapti,
+    bakabilir: !ilerleme.bitti && !ilerleme.bakti && !ilerleme.tahminYapti,
     pesEdebilir: !ilerleme.bitti && ilerleme.hata >= PES_HATASI,
   };
+}
+
+// i. oyuncunun şu an aradığı satır (üst satır 0). Bitirdiyse null.
+export function siradakiSatir(d, i) {
+  const ilerleme = d.bulma && d.bulma[i];
+  if (!ilerleme || ilerleme.bitti || ilerleme.bulunan >= satirSayisiOku(d)) {
+    return null;
+  }
+  return satirSayisiOku(d) - 1 - ilerleme.bulunan;
 }
 
 export function herkesBitti(d) {
@@ -228,44 +230,34 @@ export function oyunKazananlari(d) {
   return liste;
 }
 
-// i. oyuncunun bir sonraki doğru karesi (ekran kullanmaz, testler kullanır)
+// i. oyuncunun sıradaki satırdaki doğru kutusu: [satir, sutun] (ekran kullanmaz, testler kullanır)
 export function sonrakiDogruKare(d, i) {
+  const satir = siradakiSatir(d, i);
   const yol = d.yollar[rakipIndeks(i)];
-  const ilerleme = d.bulma[i];
-  if (!yol || !ilerleme || ilerleme.bulunan >= yol.length) {
+  if (satir === null || !yol) {
     return null;
   }
-  return yol[ilerleme.bulunan];
+  return [satir, yol[satir]];
 }
 
-// Bu kareye dokunmak mümkün mü? { neden, hata } ya da null.
-//   neden: sinir | baslangic | komsu | bulundu | denendi
-// Bunlar hata sayılmaz, yalnız uyarıdır. Arayüz göndermeden önce çağırır; motor aynı kontrolü yapar.
+// Bu kutuya dokunmak hata sayılır mı? Hata değilse { neden, hata } (yalnız uyarı), değilse null.
+//   neden: sinir | sira | bulundu | isaretli
+// Arayüz göndermeden önce çağırır; motor aynı kontrolü yapar.
 export function kareUyarisi(d, i, satir, sutun) {
-  if (!karedeMi(satir, sutun)) {
-    return { neden: 'sinir', hata: 'Bu kare tahtada yok.' };
+  const satirSayisi = satirSayisiOku(d);
+  if (!karedeMi(satir, sutun, satirSayisi)) {
+    return { neden: 'sinir', hata: 'Bu kutu tahtada yok.' };
   }
   const ilerleme = d.bulma[i];
-  const yol = d.yollar[rakipIndeks(i)];
-  const bulunanlar = yol.slice(0, ilerleme.bulunan);
-
-  if (bulunanlar.some((k) => k[0] === satir && k[1] === sutun)) {
-    return { neden: 'bulundu', hata: 'Bu kareyi zaten buldun.' };
+  const sirada = satirSayisi - 1 - ilerleme.bulunan;
+  if (satir > sirada) {
+    return { neden: 'bulundu', hata: 'Bu satırı zaten buldun.' };
   }
-  if (ilerleme.bulunan === 0) {
-    if (satir !== ALT_SATIR) {
-      return { neden: 'baslangic', hata: 'Önce alt satırda başlangıç karesini bul.' };
-    }
-  } else {
-    const son = bulunanlar[bulunanlar.length - 1];
-    if (!komsuMu(son, [satir, sutun])) {
-      return { neden: 'komsu', hata: 'Son bulduğun karenin yanındaki bir kareye dokun.' };
-    }
+  if (satir !== sirada) {
+    return { neden: 'sira', hata: 'Sıra alttan ' + (ilerleme.bulunan + 1) + '. satırda. Önce onu bul.' };
   }
-  // Aynı yerde aynı yanlışı daha önce yaptıysa tekrar sayılmaz
-  const onceki = ilerleme.yanlislar.some((y) => y.satir === satir && y.sutun === sutun && y.adim === ilerleme.bulunan);
-  if (onceki) {
-    return { neden: 'denendi', hata: 'Bu kare yanlıştı, başka kare dene.' };
+  if (ilerleme.yanlislar.some((y) => y.satir === satir && y.sutun === sutun)) {
+    return { neden: 'isaretli', hata: 'Bu kutu yanlıştı, başka kutu dene.' };
   }
   return null;
 }
@@ -274,7 +266,7 @@ export function kareUyarisi(d, i, satir, sutun) {
 // Tur kurma ve bitirme
 // ---------------------------------------------------------------------------
 
-// Yeni tura geç: yollar silinir, herkes yolunu baştan çizer
+// Yeni tura geç: yollar silinir, herkes yolunu baştan seçer
 function turuKur(d) {
   d.asama = 'kurma';
   d.yollar = d.oyuncular.map(() => null);
@@ -362,14 +354,20 @@ function ayarlaIsle(d, e) {
   if (ayar.turSayisi !== undefined && !TUR_SAYILARI.includes(ayar.turSayisi)) {
     return 'Geçersiz tur sayısı.';
   }
-  if (ayar.enAzKare !== undefined && !YOL_UZUNLUKLARI.includes(ayar.enAzKare)) {
-    return 'Geçersiz yol uzunluğu.';
+  if (ayar.satirSayisi !== undefined && !SATIR_SAYILARI.includes(ayar.satirSayisi)) {
+    return 'Geçersiz satır sayısı.';
+  }
+  if (ayar.bakmaSuresi !== undefined && !BAKMA_SURELERI.includes(ayar.bakmaSuresi)) {
+    return 'Geçersiz bakma süresi.';
   }
   if (ayar.turSayisi !== undefined) {
     d.ayar.turSayisi = ayar.turSayisi;
   }
-  if (ayar.enAzKare !== undefined) {
-    d.ayar.enAzKare = ayar.enAzKare;
+  if (ayar.satirSayisi !== undefined) {
+    d.ayar.satirSayisi = ayar.satirSayisi;
+  }
+  if (ayar.bakmaSuresi !== undefined) {
+    d.ayar.bakmaSuresi = ayar.bakmaSuresi;
   }
   return null;
 }
@@ -421,7 +419,7 @@ function hazirIsle(d, e) {
     return 'Bu odada değilsin.';
   }
   if (d.asama !== 'kurma') {
-    return 'Şu an yol çizilmez.';
+    return 'Şu an yol seçilmez.';
   }
   if (e.tur !== undefined && e.tur !== d.tur) {
     return 'Bu tur geçti.';
@@ -429,11 +427,11 @@ function hazirIsle(d, e) {
   if (d.hazir[idx]) {
     return 'Zaten hazırsın.';
   }
-  const sorun = yolHatasi(e.yol, d.ayar.enAzKare);
+  const sorun = yolHatasi(e.yol, satirSayisiOku(d));
   if (sorun) {
     return sorun;
   }
-  d.yollar[idx] = e.yol.map((k) => [k[0], k[1]]);
+  d.yollar[idx] = e.yol.slice();
   d.hazir[idx] = true;
   if (herkesHazir(d)) {
     d.asama = 'bulma';
@@ -458,14 +456,42 @@ function hazirIptalIsle(d, e) {
   return null;
 }
 
-// Rakibin yolunda bir kareye dokun
+// Bak: rakibin yolunu görme hakkı. Her turda bir kez, tahminden önce.
+// Yolun ne zaman gizleneceğini ekran kendi saatine göre bulur; motor yalnız "baktı" bilgisini tutar.
+function bakIsle(d, e) {
+  const idx = oyuncuIndeks(d, e.id);
+  if (idx < 0) {
+    return 'Bu odada değilsin.';
+  }
+  if (d.asama !== 'bulma') {
+    return 'Şu an bakılmaz.';
+  }
+  if (e.tur !== undefined && e.tur !== d.tur) {
+    return 'Bu tur geçti.';
+  }
+  const ilerleme = d.bulma[idx];
+  if (ilerleme.bitti) {
+    return 'Yolu bitirdin.';
+  }
+  if (ilerleme.bakti) {
+    return 'Bu turda zaten baktın.';
+  }
+  if (ilerleme.tahminYapti) {
+    return 'Tahmine başladın, artık bakamazsın.';
+  }
+  ilerleme.bakti = true;
+  ilerleme.bakmaZamani = Number.isFinite(e.zaman) ? e.zaman : null;
+  return null;
+}
+
+// Rakibin yolunda bir kutuya dokun
 function kareIsle(d, e) {
   const idx = oyuncuIndeks(d, e.id);
   if (idx < 0) {
     return 'Bu odada değilsin.';
   }
   if (d.asama !== 'bulma') {
-    return 'Şu an kare seçilmez.';
+    return 'Şu an kutu seçilmez.';
   }
   if (e.tur !== undefined && e.tur !== d.tur) {
     return 'Bu tur geçti.';
@@ -479,18 +505,19 @@ function kareIsle(d, e) {
     return uyari.hata;
   }
 
+  // İlk tahmin Bak hakkını yakar
+  ilerleme.tahminYapti = true;
+
   const yol = d.yollar[rakipIndeks(idx)];
-  const dogru = yol[ilerleme.bulunan];
-  if (dogru[0] === e.satir && dogru[1] === e.sutun) {
+  if (yol[e.satir] === e.sutun) {
     ilerleme.bulunan += 1;
-    if (ilerleme.bulunan >= yol.length) {
+    if (ilerleme.bulunan >= satirSayisiOku(d)) {
       ilerleme.bitti = true;
     }
   } else {
-    // Yanlış: kalıcı işaret, hata +1, başa dön
-    ilerleme.yanlislar.push({ satir: e.satir, sutun: e.sutun, adim: ilerleme.bulunan });
+    // Yanlış: kalıcı işaret, hata +1, aynı satırda devam
+    ilerleme.yanlislar.push({ satir: e.satir, sutun: e.sutun });
     ilerleme.hata += 1;
-    ilerleme.bulunan = 0;
   }
 
   if (herkesBitti(d)) {
@@ -519,7 +546,6 @@ function pesIsle(d, e) {
     return PES_HATASI + ' hataya ulaşınca pes edilebilir.';
   }
   ilerleme.hata = PES_HATASI;
-  ilerleme.bulunan = 0;
   ilerleme.bitti = true;
   ilerleme.pes = true;
   if (herkesBitti(d)) {
@@ -558,12 +584,16 @@ const HAREKETLER = {
   baslat: baslatIsle,
   hazir: hazirIsle,
   hazirIptal: hazirIptalIsle,
+  bak: bakIsle,
   kare: kareIsle,
   pes: pesIsle,
   sonraki: sonrakiIsle,
   tekrarOyna: tekrarOynaIsle,
   yeniOyun: yeniOyunIsle,
 };
+
+// Eski odada oyun ortasında bunlar çalışır (oyun verisine dokunmazlar)
+const ESKI_ODADA_SERBEST = ['katil', 'cikar', 'yeniOyun'];
 
 // Tek giriş noktası. Girdi durumu değişmez.
 export function uygula(durum, eylem, rastgele = Math.random) {
@@ -572,9 +602,21 @@ export function uygula(durum, eylem, rastgele = Math.random) {
     return { ok: false, hata: 'Bilinmeyen hareket.' };
   }
   const d = structuredClone(durum);
+  if (eskiDurumMu(d)) {
+    if (d.asama === 'lobi') {
+      // Eski lobi sessizce yeni kurallara geçer
+      kuraliYenile(d);
+    } else if (!ESKI_ODADA_SERBEST.includes(eylem.tip)) {
+      return { ok: false, hata: 'Bu oda eski kurallarla başlamıştı. Ev sahibi lobiye dönüp yeniden başlatmalı.' };
+    }
+  }
   const hata = islem(d, eylem, rastgele);
   if (hata) {
     return { ok: false, hata: hata };
+  }
+  if (eskiDurumMu(d)) {
+    // Eski odadan lobiye dönüldü: yeni kurallara geç
+    kuraliYenile(d);
   }
   return { ok: true, durum: d };
 }

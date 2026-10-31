@@ -2,43 +2,38 @@
 // Oyun kuralları gizliyol.js içindedir; burada sadece göstermek var.
 // app.js ortak yardımcıları (el, hamle, istemci...) kur() ile verir, böylece bu dosya app.js'i çağırmaz.
 //
-// Gizlilik: rakibin yolu, tur bitene kadar hiçbir yerde çizilmez.
-// Bulma ekranında yalnız benim bulduğum doğru kareler (yolun başı) ve kırmızı işaretler çıkar.
+// Gizlilik: rakibin yolu, tur bitene kadar yalnız "Bak" süresince görünür.
+// Çözme ekranında yalnız benim bulduğum doğru kutular ve kırmızı işaretler çıkar.
 
 import { onayIste } from './onay.js';
 import {
-  ALT_SATIR,
+  BAKMA_SURELERI,
   PES_HATASI,
-  TAHTA,
+  SATIR_SAYILARI,
+  SUTUN_SAYISI,
   TUR_SAYILARI,
-  UST_SATIR,
-  YOL_UZUNLUKLARI,
-  kareAnahtari,
+  bakmaSuresiOku,
+  eskiDurumMu,
   kareUyarisi,
-  komsuMu,
   oyuncuDurumu,
   oyunKazananlari,
   rakipIndeks,
-  yolAyariniDuzelt,
-  yolEnAz,
-  yolEnCok,
+  satirSayisiOku,
+  siradakiSatir,
+  turSayisiOku,
   yolHatasi,
 } from './gizliyol.js';
 
-// "Nasıl oynanır" metni (lobide ve oyun ekranlarında aynı). Yol uzunluğu ayara göre değişir.
-function nasilOynanirSatirlari(ayarDegeri) {
-  const enAz = yolEnAz(ayarDegeri);
-  const enCok = yolEnCok(ayarDegeri);
-  return [
-    'Önce herkes gizli bir yol çizer: alt satırdan başlar, üst satırda biter.',
-    'Yol karelerden oluşur. Her kare bir öncekinin yanında, üstünde ya da altında olur. Çapraz gidilmez. Aynı kareden iki kez geçilmez.',
-    'Yol en az ' + enAz + ', en fazla ' + enCok + ' kare olmalı.',
-    'Sonra ikiniz de aynı anda birbirinizin yolunu bulmaya çalışırsınız. Önce alt satırda başlangıç karesini bul.',
-    'Doğru kare yeşil yanar, bir sonraki kareyi aramaya devam edersin.',
-    'Yanlış kareye basarsan başa dönersin. Bulduğun kareler tekrar gizlenir. Ama kırmızı işaret yerinde kalır, bu sana ipucu olur.',
-    'Yolun sonuna, üst satıra ulaşan bitirir. İkiniz de bitirince daha az hata yapan turu alır.',
-  ];
-}
+// "Nasıl oynanır" metni (lobide ve oyun ekranlarında aynı)
+const NASIL_OYNANIR = [
+  'Önce her satırdan bir kutu seçersin. Seçtiğin kutular senin gizli yolundur.',
+  'Rakibin de kendi yolunu seçer. Sonra birbirinizin yolunu bulmaya çalışırsınız.',
+  '"Bak"a basarsan rakibin yolu birkaç saniye görünür. Aklında tut! Bak sadece bir kez kullanılır.',
+  'Tahmine başlarsan Bak hakkın gider.',
+  'En alttaki satırdan başlarsın. Doğru kutu yeşil olur, bir üst satıra geçersin.',
+  'Yanlış kutu kırmızı çarpı olur ve hata sayılır. Aynı satırda tekrar denersin.',
+  'Tüm satırları bulunca bitirirsin. Daha az hata yapan turu kazanır.',
+];
 
 export function gizliyolEkraniKur(k) {
   const el = k.el;
@@ -46,14 +41,16 @@ export function gizliyolEkraniKur(k) {
 
   // Ekranın kendi hafızası (oda durumunda tutulmaz)
   const durumum = {
-    anahtar: '', // hangi oda ve turdaki taslak olduğu
-    taslak: [], // kurmada çizdiğim yol (henüz gönderilmedi)
+    anahtar: '', // hangi oda, tur ve aşamadaki taslak olduğu
+    taslak: [], // kurmada seçtiğim yol (satır başına sütun ya da null), henüz gönderilmedi
     mesaj: '', // tahtanın üstündeki küçük yazı
     mesajKotu: false, // mesaj bir uyarı mı
     gonderiliyor: false,
-    gorulen: new Set(), // animasyonu oynamış kareler
-    ilkCizim: true, // ilk çizimde mevcut kareler animasyonsuz gelir
+    gorulen: new Set(), // animasyonu oynamış kutular
+    ilkCizim: true, // ilk çizimde mevcut kutular animasyonsuz gelir
     nasilAcik: false,
+    sayimBitis: 0, // çalışan geri sayımın bitiş anı (ms)
+    sayimId: null, // geri sayım zamanlayıcısı
   };
 
   // -------------------------------------------------------------------------
@@ -69,19 +66,29 @@ export function gizliyolEkraniKur(k) {
     durumum.mesajKotu = Boolean(kotu);
   }
 
-  // Oda ya da tur değiştiyse taslağı ve mesajı temizle
+  function bosTaslak(n) {
+    const taslak = [];
+    for (let i = 0; i < n; i++) {
+      taslak.push(null);
+    }
+    return taslak;
+  }
+
+  // Oda, tur ya da aşama değiştiyse taslağı ve mesajı temizle
   function turuHazirla(d) {
     const anahtar = istemci.kod + ':' + d.tur + ':' + d.asama;
     if (durumum.anahtar !== anahtar) {
-      // Kurmadan bulmaya geçerken taslağın işi biter, her aşamada temiz başla
       durumum.anahtar = anahtar;
-      durumum.taslak = [];
+      // Kurma ekranına ilk girişte taslak boş başlar. "Yolu değiştir" taslağı kendisi doldurur.
+      if (d.asama === 'kurma') {
+        durumum.taslak = bosTaslak(satirSayisiOku(d));
+      }
       mesajKoy('', false);
       durumum.gonderiliyor = false;
     }
   }
 
-  // Bu kare ilk kez mi çiziliyor? İlk çizimde (sayfa açılışı) animasyon oynamaz.
+  // Bu kutu ilk kez mi çiziliyor? İlk çizimde (sayfa açılışı) animasyon oynamaz.
   function yeniMi(anahtar) {
     if (durumum.gorulen.has(anahtar)) {
       return false;
@@ -107,18 +114,12 @@ export function gizliyolEkraniKur(k) {
     });
   }
 
-  // Odadaki yol ayarı (oda yoksa varsayılan)
-  function mevcutYolAyari() {
-    const d = istemci.durum;
-    return d && d.ayar ? d.ayar.enAzKare : undefined;
-  }
-
   function nasilOynanirKutusu() {
     const kutu = el(
       'details',
       { class: 'gy-nasil', open: durumum.nasilAcik },
       el('summary', null, 'Nasıl oynanır?'),
-      el('ul', null, nasilOynanirSatirlari(mevcutYolAyari()).map((satir) => el('li', null, satir)))
+      el('ul', null, NASIL_OYNANIR.map((satir) => el('li', null, satir)))
     );
     kutu.addEventListener('toggle', () => {
       durumum.nasilAcik = kutu.open;
@@ -127,21 +128,26 @@ export function gizliyolEkraniKur(k) {
   }
 
   // -------------------------------------------------------------------------
-  // Tahta: 6x6 kare
-  //   hucre(satir, sutun) -> { sinif, yazi, etiket, tikla } (tikla yoksa kare dokunulmaz)
+  // Tahta: 6 sütun, 8 ya da 10 satır. Soldaki küçük sayı alttan sayılır (1 = en alt satır).
+  //   hucre(satir, sutun) -> { sinif, yazi, etiket, tikla } (tikla yoksa kutu dokunulmaz)
+  //   secenek: { sira: sıradaki satır (vurgulanır), ek: ek sınıf }
   // -------------------------------------------------------------------------
 
-  function tahtaCiz(hucre, ek) {
-    const kareler = [];
-    for (let s = 0; s < TAHTA; s++) {
-      for (let c = 0; c < TAHTA; c++) {
+  function satirNo(satirSayisi, s) {
+    return satirSayisi - s;
+  }
+
+  function tahtaCiz(satirSayisi, hucre, secenek) {
+    const ayar = secenek || {};
+    const ogeler = [];
+    for (let s = 0; s < satirSayisi; s++) {
+      const sirada = ayar.sira === s;
+      ogeler.push(el('div', { class: sirada ? 'gy-satir-no sira' : 'gy-satir-no' }, String(satirNo(satirSayisi, s))));
+      for (let c = 0; c < SUTUN_SAYISI; c++) {
         const h = hucre(s, c);
         let sinif = 'gy-kare';
-        if (s === UST_SATIR) {
-          sinif += ' ust';
-        }
-        if (s === ALT_SATIR) {
-          sinif += ' alt';
+        if (sirada) {
+          sinif += ' sira-satir';
         }
         if (h.sinif) {
           sinif += ' ' + h.sinif;
@@ -152,53 +158,40 @@ export function gizliyolEkraniKur(k) {
         } else {
           ozellik.disabled = true;
         }
-        kareler.push(el('button', ozellik, h.yazi === undefined ? null : h.yazi));
+        ogeler.push(el('button', ozellik, h.yazi === undefined ? null : h.yazi));
       }
     }
     return el(
       'div',
       { class: 'gy-tahta-kutu' },
-      el('div', { class: 'gy-uc ust-yazi' }, '▲ Üst satır: yolun sonu'),
-      el('div', { class: 'gy-tahta ' + (ek || '') }, kareler),
-      el('div', { class: 'gy-uc alt-yazi' }, '▼ Alt satır: yolun başı')
+      el('div', { class: 'gy-tahta ' + (ayar.ek || ''), style: '--gy-yuk: ' + (satirSayisi > 8 ? 40 : 44) + 'px' }, ogeler)
     );
   }
 
-  function kareEtiketi(s, c) {
-    return 'Satır ' + (s + 1) + ', sütun ' + (c + 1);
+  function kareEtiketi(satirSayisi, s, c) {
+    return 'Alttan ' + satirNo(satirSayisi, s) + '. satır, ' + (c + 1) + '. sütun';
   }
 
   // -------------------------------------------------------------------------
   // Lobi: oyuna özel bölüm (oyun seçici ve oyuncular app.js'te)
   // -------------------------------------------------------------------------
 
+  function secenekDugmeleri(liste, secili, sahipMi, yaz, ayarAdi) {
+    return liste.map((sayi) =>
+      el(
+        'button',
+        {
+          class: 'secenek',
+          'aria-pressed': secili === sayi ? 'true' : 'false',
+          disabled: !sahipMi,
+          onclick: () => k.hamle({ tip: 'ayarla', ayar: { [ayarAdi]: sayi } }),
+        },
+        yaz(sayi)
+      )
+    );
+  }
+
   function lobiBolumu(d, sahipMi) {
-    const turDugmeleri = TUR_SAYILARI.map((sayi) =>
-      el(
-        'button',
-        {
-          class: 'secenek',
-          'aria-pressed': d.ayar.turSayisi === sayi ? 'true' : 'false',
-          disabled: !sahipMi,
-          onclick: () => k.hamle({ tip: 'ayarla', ayar: { turSayisi: sayi } }),
-        },
-        String(sayi)
-      )
-    );
-
-    const uzunlukDugmeleri = YOL_UZUNLUKLARI.map((sayi) =>
-      el(
-        'button',
-        {
-          class: 'secenek',
-          'aria-pressed': yolAyariniDuzelt(d.ayar.enAzKare) === sayi ? 'true' : 'false',
-          disabled: !sahipMi,
-          onclick: () => k.hamle({ tip: 'ayarla', ayar: { enAzKare: sayi } }),
-        },
-        (sayi === YOL_UZUNLUKLARI[0] ? 'Kısa' : 'Uzun') + ': ' + sayi + '-' + yolEnCok(sayi) + ' kare'
-      )
-    );
-
     const yeterli = d.oyuncular.length === 2;
 
     return [
@@ -206,11 +199,13 @@ export function gizliyolEkraniKur(k) {
         'div',
         { class: 'kutu' },
         el('h2', null, 'Ayarlar'),
-        el('p', { class: 'soluk-yazi' }, 'Herkes gizli bir yol çizer, sonra birbirinizin yolunu bulursunuz. Az hata yapan kazanır.'),
+        el('p', { class: 'soluk-yazi' }, 'Her satırdan bir kutu seçip gizli yolunu kurarsın. Sonra birbirinizin yolunu bulursunuz. Az hata yapan kazanır.'),
         el('div', { class: 'etiket' }, 'Tur sayısı'),
-        el('div', { class: 'secenekler' }, turDugmeleri),
-        el('div', { class: 'etiket' }, 'Yolun uzunluğu'),
-        el('div', { class: 'secenekler' }, uzunlukDugmeleri),
+        el('div', { class: 'secenekler' }, secenekDugmeleri(TUR_SAYILARI, turSayisiOku(d), sahipMi, (n) => String(n), 'turSayisi')),
+        el('div', { class: 'etiket' }, 'Tahta büyüklüğü'),
+        el('div', { class: 'secenekler' }, secenekDugmeleri(SATIR_SAYILARI, satirSayisiOku(d), sahipMi, (n) => n + ' satır', 'satirSayisi')),
+        el('div', { class: 'etiket' }, 'Bak süresi'),
+        el('div', { class: 'secenekler' }, secenekDugmeleri(BAKMA_SURELERI, bakmaSuresiOku(d), sahipMi, (n) => n + ' sn', 'bakmaSuresi')),
         sahipMi ? null : el('p', { class: 'soluk-yazi' }, 'Ayarları sadece ev sahibi değiştirir.')
       ),
       nasilOynanirKutusu(),
@@ -230,92 +225,69 @@ export function gizliyolEkraniKur(k) {
   }
 
   // -------------------------------------------------------------------------
-  // Kurma: yolunu çiz
+  // Eski kurallarla başlamış oda
   // -------------------------------------------------------------------------
 
-  // Çizim sırasında kareye dokunma
+  function eskiOdaEkrani(d) {
+    const sahipMi = d.sahip === istemci.oyuncuId;
+    return el(
+      'div',
+      { class: 'gy-sayfa' },
+      el('div', { class: 'gy-mesaj kotu' }, 'Bu oyun eski kurallarla başlamıştı. Yeni kurallarla devam edemez.'),
+      sahipMi
+        ? el(
+            'div',
+            { class: 'gy-alt' },
+            el('button', { class: 'dugme birincil genis', onclick: () => k.hamle({ tip: 'yeniOyun' }) }, 'Lobiye dön')
+          )
+        : el('p', { class: 'slogan' }, 'Ev sahibi lobiye döndürecek.')
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Kurma: her satırdan bir kutu seç
+  // -------------------------------------------------------------------------
+
+  // Taslakta kaç satır seçili
+  function secilenSayisi() {
+    return durumum.taslak.filter((s) => s !== null && s !== undefined).length;
+  }
+
+  // Kurma sırasında kutuya dokunma: o satırdaki seçim bu kutu olur, aynı kutuya tekrar dokunmak kaldırır
   function kurmaDokun(s, c) {
     const d = istemci.durum;
     if (!d || d.asama !== 'kurma' || d.hazir[k.benimIndeks()]) {
       return;
     }
-    const yol = durumum.taslak;
-    const son = yol[yol.length - 1];
-
-    if (son && son[0] === s && son[1] === c) {
-      // Son kareye dokunmak bir adım geri alır
-      yol.pop();
-      mesajKoy('', false);
-      k.render();
-      return;
-    }
-    if (!son) {
-      if (s !== ALT_SATIR) {
-        mesajKoy('Yol alt satırdan başlar. Alttaki satırdan bir kare seç.', true);
-        k.render();
-        return;
-      }
-    } else if (yol.some((kare) => kare[0] === s && kare[1] === c)) {
-      mesajKoy('Bu kareden zaten geçtin. Geri almak için son kareye dokun.', true);
-      k.render();
-      return;
-    } else if (!komsuMu(son, [s, c])) {
-      mesajKoy('Son karenin yanındaki, üstündeki ya da altındaki bir kareyi seç.', true);
-      k.render();
-      return;
-    }
-    if (yol.length >= yolEnCok(d.ayar.enAzKare)) {
-      mesajKoy('Yol en fazla ' + yolEnCok(d.ayar.enAzKare) + ' kare olabilir. Yeni kare eklenmedi.', true);
-      k.render();
-      return;
-    }
-    yol.push([s, c]);
+    durumum.taslak[s] = durumum.taslak[s] === c ? null : c;
     mesajKoy('', false);
     k.render();
   }
 
-  function taslakYazisi(d) {
-    const yol = durumum.taslak;
-    if (yol.length === 0) {
-      return 'Alt satırdan bir kare seçerek yola başla.';
-    }
-    const sorun = yolHatasi(yol, d.ayar.enAzKare);
-    if (sorun === null) {
-      return 'Yolun hazır, "Hazırım"a basabilirsin.';
-    }
-    if (yol[yol.length - 1][0] !== UST_SATIR) {
-      return 'Yolu üst satıra kadar sürdür.';
-    }
-    return sorun;
-  }
-
   function kurmaEkrani(d, ben) {
     const rakip = rakipIndeks(ben);
+    const satirSayisi = satirSayisiOku(d);
     const hazirim = d.hazir[ben];
     const yol = hazirim ? d.yollar[ben] : durumum.taslak;
-    const sira = new Map();
-    yol.forEach((kare, i) => sira.set(kareAnahtari(kare[0], kare[1]), i));
-    const son = yol[yol.length - 1];
+    const eksikSatir = yol.findIndex((s) => s === null || s === undefined);
 
-    const tahta = tahtaCiz((s, c) => {
-      const i = sira.get(kareAnahtari(s, c));
-      const h = { etiket: kareEtiketi(s, c) };
-      if (i !== undefined) {
-        h.sinif = 'yol';
-        if (i === yol.length - 1) {
-          h.sinif += ' son';
+    const tahta = tahtaCiz(
+      satirSayisi,
+      (s, c) => {
+        const h = { etiket: kareEtiketi(satirSayisi, s, c) };
+        if (yol[s] === c) {
+          h.sinif = 'secili';
+          h.yazi = '●';
         }
-        h.yazi = String(i + 1);
-      } else if (!hazirim && son && komsuMu(son, [s, c])) {
-        h.sinif = 'olabilir';
-      } else if (!hazirim && !son && s === ALT_SATIR) {
-        h.sinif = 'olabilir';
-      }
-      if (!hazirim) {
-        h.tikla = () => kurmaDokun(s, c);
-      }
-      return h;
-    }, 'kurma');
+        if (!hazirim) {
+          h.tikla = () => kurmaDokun(s, c);
+        }
+        return h;
+      },
+      { ek: 'kurma' }
+    );
+
+    const tamam = yolHatasi(durumum.taslak, satirSayisi) === null;
 
     let alt;
     if (hazirim) {
@@ -326,15 +298,15 @@ export function gizliyolEkraniKur(k) {
           'div',
           { class: 'tanis-bekle', 'aria-live': 'polite' },
           el('span', { class: 'nokta-nabiz' }),
-          d.oyuncular[rakip].ad + ' yolunu çiziyor…'
+          d.oyuncular[rakip].ad + ' yolunu seçiyor…'
         ),
         el(
           'button',
           {
             class: 'dugme ikincil genis',
             onclick: () => {
-              // Yolu taslağa geri al, böylece baştan çizmek gerekmez
-              durumum.taslak = d.yollar[ben].map((kare) => [kare[0], kare[1]]);
+              // Yolu taslağa geri al, böylece baştan seçmek gerekmez
+              durumum.taslak = d.yollar[ben].slice();
               hamleGonder({ tip: 'hazirIptal', tur: d.tur });
             },
           },
@@ -342,7 +314,6 @@ export function gizliyolEkraniKur(k) {
         )
       );
     } else {
-      const gecerli = yolHatasi(durumum.taslak, d.ayar.enAzKare) === null;
       alt = el(
         'div',
         { class: 'gy-alt' },
@@ -353,9 +324,9 @@ export function gizliyolEkraniKur(k) {
             'button',
             {
               class: 'dugme ikincil',
-              disabled: durumum.taslak.length === 0,
+              disabled: secilenSayisi() === 0,
               onclick: () => {
-                durumum.taslak = [];
+                durumum.taslak = bosTaslak(satirSayisi);
                 mesajKoy('', false);
                 k.render();
               },
@@ -365,9 +336,22 @@ export function gizliyolEkraniKur(k) {
           el(
             'button',
             {
+              class: 'dugme ikincil',
+              onclick: () => {
+                // Her satıra rastgele bir kutu
+                durumum.taslak = bosTaslak(satirSayisi).map(() => Math.floor(Math.random() * SUTUN_SAYISI));
+                mesajKoy('', false);
+                k.render();
+              },
+            },
+            'Rastgele doldur'
+          ),
+          el(
+            'button',
+            {
               class: 'dugme birincil',
-              disabled: !gecerli,
-              onclick: () => hamleGonder({ tip: 'hazir', tur: d.tur, yol: durumum.taslak.map((kare) => [kare[0], kare[1]]) }),
+              disabled: !tamam,
+              onclick: () => hamleGonder({ tip: 'hazir', tur: d.tur, yol: durumum.taslak.slice() }),
             },
             'Hazırım'
           )
@@ -376,25 +360,30 @@ export function gizliyolEkraniKur(k) {
       );
     }
 
-    // Kare sayacı: geçerli aralıktaysa yeşil
-    const enAzKare = yolEnAz(d.ayar.enAzKare);
-    const enCokKare = yolEnCok(d.ayar.enAzKare);
-    const kareSayisi = yol.length;
-    const sayacGecerli = kareSayisi >= enAzKare && kareSayisi <= enCokKare;
+    const secilen = hazirim ? satirSayisi : secilenSayisi();
     const sayac = el(
       'div',
-      { class: sayacGecerli ? 'gy-yol-sayac iyi' : 'gy-yol-sayac' },
-      'Yol: ' + kareSayisi + ' kare (' + enAzKare + '-' + enCokKare + ' arası olmalı)'
+      { class: secilen === satirSayisi ? 'gy-yol-sayac iyi' : 'gy-yol-sayac' },
+      'Seçilen: ' + secilen + ' / ' + satirSayisi + ' satır'
     );
 
-    const bilgi = hazirim ? 'Yolun hazır. Rakibin hazır olunca oyun başlar.' : taslakYazisi(d);
+    let bilgi;
+    if (hazirim) {
+      bilgi = 'Yolun hazır. Rakibin hazır olunca oyun başlar.';
+    } else if (tamam) {
+      bilgi = 'Yolun hazır, "Hazırım"a basabilirsin.';
+    } else if (eksikSatir >= 0) {
+      bilgi = 'Her satırdan bir kutu seç. Kutuya tekrar dokunursan seçim kalkar.';
+    } else {
+      bilgi = 'Her satırdan bir kutu seç.';
+    }
     const mesaj = durumum.mesaj ? durumum.mesaj : bilgi;
     const mesajSinifi = durumum.mesaj && durumum.mesajKotu ? 'gy-mesaj kotu' : 'gy-mesaj';
 
     return el(
       'div',
       { class: 'gy-sayfa' },
-      el('div', { class: 'gy-ust' }, el('span', null, 'Tur ' + (d.tur + 1) + '/' + d.ayar.turSayisi), el('span', null, 'Yolunu çiz')),
+      el('div', { class: 'gy-ust' }, el('span', null, 'Tur ' + (d.tur + 1) + '/' + turSayisiOku(d)), el('span', null, 'Gizli yolunu seç')),
       el('div', { class: mesajSinifi, role: 'status', 'aria-live': 'polite' }, mesaj),
       sayac,
       tahta,
@@ -404,13 +393,14 @@ export function gizliyolEkraniKur(k) {
   }
 
   // -------------------------------------------------------------------------
-  // Bulma: rakibin yolunu ara
+  // Çözme: rakibin yolunu ara
   // -------------------------------------------------------------------------
 
-  // Rakibin ilerlemesi (hangi kareler olduğu görünmez)
+  // Rakibin ilerlemesi (hangi kutular olduğu görünmez)
   function rakipKarti(d, i) {
     const durum = oyuncuDurumu(d, i);
-    let yazi = durum.bulunan + ' kare ilerledi · ' + durum.hata + ' hata';
+    const satirSayisi = satirSayisiOku(d);
+    let yazi = durum.bulunan + '/' + satirSayisi + ' satır · ' + durum.hata + ' hata';
     let sinif = 'gy-rakip';
     if (durum.pes) {
       yazi = 'pes etti · ' + durum.hata + ' hata';
@@ -425,14 +415,14 @@ export function gizliyolEkraniKur(k) {
       el(
         'div',
         { class: 'baslik-satiri' },
-        el('span', { class: 'ad' }, d.oyuncular[i].ad),
+        el('span', { class: 'ad' }, d.oyuncular[i].ad + (durum.bakti ? ' baktı' : '')),
         el('span', { class: 'puan-rozeti' }, d.oyuncular[i].puan + ' puan')
       ),
       el('div', { class: 'durum' }, yazi)
     );
   }
 
-  // Bulma sırasında kareye dokunma
+  // Çözme sırasında kutuya dokunma
   function bulmaDokun(s, c) {
     const d = istemci.durum;
     const ben = k.benimIndeks();
@@ -454,12 +444,80 @@ export function gizliyolEkraniKur(k) {
       }
       const simdi = oyuncuDurumu(yeni, ben);
       if (simdi.hata > onceki.hata) {
-        mesajKoy('Yanlış kare! Başa döndün. Kırmızı işaret yerinde kalır.', true);
+        mesajKoy('Yanlış kutu! Aynı satırda tekrar dene.', true);
       } else {
         mesajKoy('', false);
       }
       k.render();
     });
+  }
+
+  // Bak'a bas: rakibin yolu süre boyunca görünür
+  function bakDokun() {
+    const d = istemci.durum;
+    const ben = k.benimIndeks();
+    if (!d || d.asama !== 'bulma' || ben < 0 || !oyuncuDurumu(d, ben).bakabilir) {
+      return;
+    }
+    mesajKoy('', false);
+    hamleGonder({ tip: 'bak', tur: d.tur, zaman: Date.now() }, () => k.render());
+  }
+
+  // Geri sayım: her çeyrek saniyede yazıyı günceller, süre bitince ekranı yeniler (yol gizlenir)
+  function sayimiDurdur() {
+    if (durumum.sayimId !== null) {
+      clearInterval(durumum.sayimId);
+      durumum.sayimId = null;
+    }
+    durumum.sayimBitis = 0;
+  }
+
+  function sayimiBaslat(bitis) {
+    if (durumum.sayimId !== null && durumum.sayimBitis === bitis) {
+      return; // zaten bu süre için çalışıyor
+    }
+    sayimiDurdur();
+    durumum.sayimBitis = bitis;
+    durumum.sayimId = setInterval(() => {
+      const kalan = bitis - Date.now();
+      if (kalan <= 0) {
+        sayimiDurdur();
+        k.render();
+        return;
+      }
+      const yazi = document.querySelector('.gy-sayim-sn');
+      if (yazi) {
+        yazi.textContent = String(Math.ceil(kalan / 1000));
+      }
+    }, 250);
+  }
+
+  // Bak paneli: düğme, geri sayım ya da kısa bilgi
+  function bakPaneli(d, durum, bitis) {
+    if (durum.bitti) {
+      return null;
+    }
+    const gorunuyor = bitis > Date.now();
+    if (gorunuyor) {
+      return el(
+        'div',
+        { class: 'gy-bak sayiyor', role: 'status' },
+        el('span', { class: 'gy-sayim-sn' }, String(Math.ceil((bitis - Date.now()) / 1000))),
+        el('span', { class: 'gy-bak-yazi' }, 'Rakibinin yolunu aklında tut!')
+      );
+    }
+    if (durum.bakabilir) {
+      return el(
+        'div',
+        { class: 'gy-bak' },
+        el('button', { class: 'dugme birincil gy-bak-dugme', onclick: bakDokun }, '👁 Bak (' + bakmaSuresiOku(d) + ' sn)'),
+        el('span', { class: 'gy-bak-yazi' }, 'Tahmine başlarsan Bak hakkın gider.')
+      );
+    }
+    if (durum.bakti && !durum.tahminYapti) {
+      return el('div', { class: 'gy-bak bitti' }, el('span', { class: 'gy-bak-yazi' }, 'Baktın. Şimdi alttan başla.'));
+    }
+    return null;
   }
 
   function bulmaEkrani(d, ben) {
@@ -468,44 +526,61 @@ export function gizliyolEkraniKur(k) {
     const ilerleme = d.bulma[ben];
     const oynuyorum = !durum.bitti;
     const hedef = d.yollar[rakip];
+    const satirSayisi = satirSayisiOku(d);
+    const sirada = siradakiSatir(d, ben);
 
-    // Bulduğum kareler (rakibin yolunun başı) ve kalıcı işaretler
-    const bulunanlar = new Map();
-    for (let i = 0; i < ilerleme.bulunan; i++) {
-      bulunanlar.set(kareAnahtari(hedef[i][0], hedef[i][1]), i);
+    // Bak süresi sürüyor mu? (bitiş anı, bakılan oyuncunun kendi saatine göre durumda tutulur)
+    const bitis = durum.bakti && durum.bakmaZamani ? durum.bakmaZamani + bakmaSuresiOku(d) * 1000 : 0;
+    const gorunuyor = oynuyorum && bitis > Date.now();
+    if (gorunuyor) {
+      sayimiBaslat(bitis);
+    } else {
+      sayimiDurdur();
     }
-    const isaretler = new Map();
-    ilerleme.yanlislar.forEach((y, n) => isaretler.set(kareAnahtari(y.satir, y.sutun), n));
 
-    const tahta = tahtaCiz((s, c) => {
-      const anahtar = kareAnahtari(s, c);
-      const h = { etiket: kareEtiketi(s, c) };
-      if (bulunanlar.has(anahtar)) {
-        const i = bulunanlar.get(anahtar);
-        h.sinif = 'dogru';
-        if (yeniMi(d.tur + ':d:' + anahtar + ':' + ilerleme.hata + ':' + i)) {
-          h.sinif += ' parla';
+    // Kalıcı işaretler
+    const isaretler = new Set(ilerleme.yanlislar.map((y) => y.satir + ',' + y.sutun));
+
+    const tahta = tahtaCiz(
+      satirSayisi,
+      (s, c) => {
+        const h = { etiket: kareEtiketi(satirSayisi, s, c) };
+        const bulunduMu = sirada === null || s > sirada; // bu satır bulundu
+        if (bulunduMu && hedef[s] === c) {
+          h.sinif = 'dogru';
+          if (yeniMi(d.tur + ':d:' + s)) {
+            h.sinif += ' parla';
+          }
+          h.yazi = '✓';
+        } else if (isaretler.has(s + ',' + c)) {
+          h.sinif = 'yanlis';
+          if (yeniMi(d.tur + ':y:' + s + ',' + c)) {
+            h.sinif += ' sallan';
+          }
+          h.yazi = '✕';
+        } else if (gorunuyor && hedef[s] === c) {
+          // Bak süresi: rakibin yolu
+          h.sinif = 'goster';
+          h.yazi = '●';
+        } else if (bulunduMu) {
+          h.sinif = 'gec';
         }
-        h.yazi = String(i + 1);
-      } else if (isaretler.has(anahtar)) {
-        h.sinif = 'yanlis';
-        if (yeniMi(d.tur + ':y:' + anahtar + ':' + isaretler.get(anahtar))) {
-          h.sinif += ' sallan';
+        if (oynuyorum && !gorunuyor) {
+          h.tikla = () => bulmaDokun(s, c);
         }
-        h.yazi = '✕';
-      }
-      if (oynuyorum) {
-        h.tikla = () => bulmaDokun(s, c);
-      }
-      return h;
-    }, 'bulma');
+        return h;
+      },
+      { ek: 'bulma', sira: oynuyorum ? sirada : undefined }
+    );
 
     // Mesaj yoksa nerede olduğumuzu söyle
     let bilgi;
-    if (ilerleme.bulunan === 0) {
-      bilgi = 'Alt satırda yolun başlangıç karesini bul.';
+    if (gorunuyor) {
+      bilgi = 'Süre bitince yol gizlenir.';
+    } else if (oynuyorum) {
+      bilgi = 'Alttan ' + (ilerleme.bulunan + 1) + '. satırdaki doğru kutuyu bul.';
     } else {
-      bilgi = 'Son bulduğun karenin yanındaki kareye dokun.';
+      bilgi = '';
     }
     const mesaj = durumum.mesaj ? durumum.mesaj : bilgi;
     const mesajSinifi = durumum.mesaj && durumum.mesajKotu ? 'gy-mesaj kotu' : 'gy-mesaj';
@@ -519,7 +594,7 @@ export function gizliyolEkraniKur(k) {
         el(
           'div',
           { class: 'gy-sayac' },
-          el('span', null, 'Bulduğun: ' + durum.bulunan + ' kare'),
+          el('span', null, 'Bulunan: ' + durum.bulunan + ' / ' + satirSayisi + ' satır'),
           el('span', { class: durum.hata > 0 ? 'kotu' : null }, 'Hata: ' + durum.hata)
         ),
         durum.pesEdebilir
@@ -562,9 +637,10 @@ export function gizliyolEkraniKur(k) {
     return el(
       'div',
       { class: 'gy-sayfa' },
-      el('div', { class: 'gy-ust' }, el('span', null, 'Tur ' + (d.tur + 1) + '/' + d.ayar.turSayisi), el('span', null, d.oyuncular[ben].puan + ' puanın var')),
+      el('div', { class: 'gy-ust' }, el('span', null, 'Tur ' + (d.tur + 1) + '/' + turSayisiOku(d)), el('span', null, d.oyuncular[ben].puan + ' puanın var')),
       rakipKarti(d, rakip),
-      el('div', { class: mesajSinifi, role: 'status', 'aria-live': 'polite' }, mesaj),
+      bakPaneli(d, durum, bitis),
+      mesaj ? el('div', { class: mesajSinifi, role: 'status', 'aria-live': 'polite' }, mesaj) : null,
       tahta,
       alt,
       nasilOynanirKutusu()
@@ -576,27 +652,26 @@ export function gizliyolEkraniKur(k) {
   // -------------------------------------------------------------------------
 
   // Açık tahta: bir oyuncunun yolu ve karşı tarafın o yolda yaptığı hatalar
-  function acikTahta(yol, yanlislar, ek) {
-    const sira = new Map();
-    yol.forEach((kare, i) => sira.set(kareAnahtari(kare[0], kare[1]), i));
-    const isaretler = new Set(yanlislar.map((y) => kareAnahtari(y.satir, y.sutun)));
-    return tahtaCiz((s, c) => {
-      const anahtar = kareAnahtari(s, c);
-      const h = { etiket: kareEtiketi(s, c) };
-      const yolda = sira.has(anahtar);
-      const hatali = isaretler.has(anahtar);
-      if (yolda && hatali) {
-        h.sinif = 'yol hatali';
-        h.yazi = String(sira.get(anahtar) + 1);
-      } else if (yolda) {
-        h.sinif = 'yol';
-        h.yazi = String(sira.get(anahtar) + 1);
-      } else if (hatali) {
-        h.sinif = 'yanlis';
-        h.yazi = '✕';
-      }
-      return h;
-    }, 'acik ' + (ek || ''));
+  function acikTahta(yol, yanlislar) {
+    const satirSayisi = yol.length;
+    const isaretler = new Set(yanlislar.map((y) => y.satir + ',' + y.sutun));
+    return tahtaCiz(
+      satirSayisi,
+      (s, c) => {
+        const h = { etiket: kareEtiketi(satirSayisi, s, c) };
+        const yolda = yol[s] === c;
+        const hatali = isaretler.has(s + ',' + c);
+        if (yolda) {
+          h.sinif = 'yol';
+          h.yazi = '●';
+        } else if (hatali) {
+          h.sinif = 'yanlis';
+          h.yazi = '✕';
+        }
+        return h;
+      },
+      { ek: 'acik' }
+    );
   }
 
   function turKazananMetni(d, g, ben) {
@@ -631,25 +706,25 @@ export function gizliyolEkraniKur(k) {
   function acikEkrani(d, ben) {
     const g = d.gecmis[d.gecmis.length - 1];
     const rakip = rakipIndeks(ben);
-    const sonTur = d.tur + 1 >= d.ayar.turSayisi;
+    const sonTur = d.tur + 1 >= turSayisiOku(d);
 
     return el(
       'div',
       { class: 'gy-sayfa sonuc' },
-      el('div', { class: 'gy-ust' }, el('span', null, 'Tur ' + (d.tur + 1) + '/' + d.ayar.turSayisi), el('span', null, 'Sonuç')),
+      el('div', { class: 'gy-ust' }, el('span', null, 'Tur ' + (d.tur + 1) + '/' + turSayisiOku(d)), el('span', null, 'Sonuç')),
       el('p', { class: 'gy-kazanan' }, turKazananMetni(d, g, ben)),
       el(
         'div',
         { class: 'gy-yol-kutusu' },
         el('h2', null, 'Senin yolun'),
-        el('p', { class: 'soluk-yazi' }, d.oyuncular[rakip].ad + ' bunu bulmaya çalıştı. Kırmızı ✕ işaretler onun yanlış bastığı kareler.'),
+        el('p', { class: 'soluk-yazi' }, d.oyuncular[rakip].ad + ' bunu bulmaya çalıştı: ' + d.bulma[rakip].hata + ' hata. Kırmızı ✕ işaretler onun yanlış bastığı kutular.'),
         acikTahta(d.yollar[ben], d.bulma[rakip].yanlislar)
       ),
       el(
         'div',
         { class: 'gy-yol-kutusu' },
-        el('h2', null, d.oyuncular[rakip].ad + ' oyuncusunun yolu'),
-        el('p', { class: 'soluk-yazi' }, 'Sen bunu bulmaya çalıştın. Kırmızı ✕ işaretler senin yanlış bastığın kareler.'),
+        el('h2', null, 'Rakibin yolu: ' + d.oyuncular[rakip].ad),
+        el('p', { class: 'soluk-yazi' }, 'Sen bunu bulmaya çalıştın: ' + d.bulma[ben].hata + ' hata. Kırmızı ✕ işaretler senin yanlış bastığın kutular.'),
         acikTahta(d.yollar[rakip], d.bulma[ben].yanlislar)
       ),
       puanTablosu(d, ben, g.kazanan >= 0 ? [g.kazanan] : [], { artis: true }),
@@ -721,18 +796,26 @@ export function gizliyolEkraniKur(k) {
     );
   }
 
-  // Tüm sayfa (üst çubuk dahil): kurma, bulma, acik ve bitti aşamaları
+  // Tüm sayfa (üst çubuk dahil): kurma, çözme, açık ve bitti aşamaları
   function sayfa(d, ben) {
-    turuHazirla(d);
     let govde;
-    if (d.asama === 'bitti') {
-      govde = bitisEkrani(d, ben);
-    } else if (d.asama === 'acik') {
-      govde = acikEkrani(d, ben);
-    } else if (d.asama === 'bulma') {
-      govde = bulmaEkrani(d, ben);
+    if (eskiDurumMu(d)) {
+      sayimiDurdur();
+      govde = eskiOdaEkrani(d);
     } else {
-      govde = kurmaEkrani(d, ben);
+      turuHazirla(d);
+      if (d.asama !== 'bulma') {
+        sayimiDurdur();
+      }
+      if (d.asama === 'bitti') {
+        govde = bitisEkrani(d, ben);
+      } else if (d.asama === 'acik') {
+        govde = acikEkrani(d, ben);
+      } else if (d.asama === 'bulma') {
+        govde = bulmaEkrani(d, ben);
+      } else {
+        govde = kurmaEkrani(d, ben);
+      }
     }
     durumum.ilkCizim = false;
     return [k.ustCubuk(), govde];
@@ -746,6 +829,7 @@ export function gizliyolEkraniKur(k) {
     durumum.gonderiliyor = false;
     durumum.gorulen = new Set();
     durumum.ilkCizim = true;
+    sayimiDurdur();
   }
 
   return {

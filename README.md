@@ -11,7 +11,7 @@ GitHub Pages'te çalışır, derleme gerekmez.
 | **Beni ne kadar tanıyorsun** | 2 | Birbirinizin cevaplarını tahmin edin (birlikte oynanır, kazanan yok). |
 | **Kelime düellosu** | 2-4 | Aynı gizli kelimeyi önce kim bulacak? |
 | **Aynı Kafa** | 2-4 | Aynı cevabı yazın, birlikte puan toplayın (kazanan yok). |
-| **Gizli Yol** | 2 | Rakibinin gizli yolunu bul. |
+| **Gizli Yol** | 2 | Rakibinin gizli yolunu hatırla ve bul. |
 | **Gizli Görev** | 2-4 | Gizli görevini fark ettirmeden yap. |
 | **Taş Kağıt Makas** | 2 | Taş, kağıt, makas: kartını gizlice seç. |
 | **Risk Kulesi** | 2-4 | Zar at, kuleni yükselt, yıkılmadan dur. |
@@ -90,23 +90,23 @@ Sonda **Uyum** yüzdesi (doğru tahmin / (2 x soru sayısı)) ve **Bunları konu
 - İpucu bankası `aynikafa-ipuclari.js` içindedir (`IPUCLARI`).
 
 ### Gizli Yol
-Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6x6 karedir. Herkes gizli bir yol çizer, sonra birbirinin yolunu bulur.
-- **Kurma:** Yol alt satırdaki bir kareden başlar, üst satırdaki bir karede biter. Her adım bir önceki kareye yan yana ya da alt alta komşudur
-  (çapraz yok), aynı kareden iki kez geçilmez. Yol kısa ayarda 8-10, uzun ayarda 12-14 kare olmalı (ayar: **Kısa: 8-10 kare**, **Uzun: 12-14 kare**). Ekranda "Yol: 7 kare (8-10 arası olmalı)" sayacı vardır, geçerli aralıkta yeşil olur. Üst sınıra gelince yeni kare eklenmez, kısa bir uyarı çıkar. Eski odalardaki "kısa"/"uzun"/sayı ayarı yeni aralıklardan birine eşlenir.
-  Parmakla çizilir: kareye dokundukça yol uzar, son kareye dokununca bir adım geri alınır, **Temizle** hepsini siler.
-  Yol geçerli olunca **Hazırım**'a basılır (rakip hazır olmadan **Yolu değiştir** ile vazgeçilebilir). İkisi de hazır olunca bulma başlar.
-- **Bulma:** Önce alt satırda başlangıç karesi aranır, sonra hep son bulunan kareye komşu bir kareye dokunulur.
-  Doğru kare yeşil yanar. Yanlış kare kalıcı kırmızı çarpı olur, hata sayısı 1 artar ve oyuncu **başa döner**:
-  bulduğu kareler (başlangıç dahil) tekrar gizlenir, yolu baştan yürümesi gerekir. Kırmızı çarpılar kalır, bu yüzden her hata ipucu verir.
-  Başlangıç için alt satırda yanlış kareye basmak da hatadır. Komşu olmayan kareye ya da bulunmuş kareye dokunmak hata sayılmaz, kısa bir uyarı çıkar.
-  Aynı yerde (aynı bulunan kare sayısında) aynı yanlış kareye tekrar basmak da hata sayılmaz, uyarı çıkar.
-- Üst satıra ulaşıp yolun son karesini bulan bitirmiş olur. Rakibin ilerlemesi canlı görünür (kaç kare ilerledi, kaç hata), hangi kareler olduğu görünmez.
-- İkisi de bitirince tur biter: daha az hata yapan turu alır, eşitse berabere (puan yok). Sonuçta iki yol da açılır;
-  her yolun üstünde rakibin o yolda yaptığı hatalar gösterilir. Herhangi biri **Sonraki tur**'a basabilir.
+Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6 sütun ve 8 ya da 10 satırdır. Bir hafıza ve zekâ oyunudur: herkes gizli bir yol seçer, sonra birbirinin yolunu hatırlayıp bulmaya çalışır.
+- **Kurma:** Her satırdan tam bir kutu seçilir (hangi sütun olduğu serbest, komşuluk şartı yok). Bir satırda başka kutuya dokunursan seçim oraya taşınır, seçili kutuya tekrar dokunursan seçim kalkar.
+  Ekranda "Seçilen: 6 / 10 satır" sayacı vardır. **Temizle** hepsini siler, **Rastgele doldur** her satıra rastgele bir kutu koyar.
+  Bütün satırlar seçilince **Hazırım** açılır (rakip hazır olmadan **Yolu değiştir** ile vazgeçilebilir). İkisi de hazır olunca çözme başlar.
+- **Bakma:** Çözme başında büyük bir **Bak** düğmesi vardır. Basınca rakibin yolu (her satırdaki kutu) ayardaki süre kadar görünür, ekranda geri sayım olur, süre bitince gizlenir.
+  Bak her turda **bir kez** kullanılır. Bakmadan da başlanabilir: ilk tahminde Bak hakkı yanar ("Tahmine başlarsan Bak hakkın gider."). Rakip "Ayşe baktı" diye görür.
+  Motor yalnız "baktı" bilgisini ve basılan anı tutar; yolu gizleme işini ekran kendi saatiyle yapar (sayfa yenilenirse süre kaldığı yerden sürer).
+- **Çözme:** En alt satırdan başlayıp yukarı çıkılır. Sıradaki satırda bir kutuya dokunulur.
+  Doğruysa kutu yeşil yanar, kalıcı açık kalır ve sıradaki satıra geçilir. Yanlışsa kutu kalıcı kırmızı çarpı olur, hata 1 artar ve oyuncu **aynı satırda** denemeye devam eder (başa dönme yok).
+  İşaretli kutuya tekrar dokunmak ya da sıradaki satır dışına dokunmak hata sayılmaz, kısa bir uyarı çıkar. Sıradaki satır tahtada belirgindir, satır numaraları solda küçük yazılıdır (1 = en alt satır).
+- Bütün satırları bulan bitirir. Rakibin ilerlemesi canlı görünür (kaç satır buldu, kaç hata), kutuları görünmez.
+- İkisi de bitirince tur biter: daha az hata yapan turu alır, eşitse berabere (puan yok). Sonuçta iki yol ve karşı tarafın o yolda yaptığı hatalar gösterilir. Herhangi biri **Sonraki tur**'a basabilir.
 - Biri 25 hataya ulaşırsa **Pes et** düğmesi çıkar: pes eden o tur 25 hata sayılır ve rakibin bitirmesini bekler.
-- Ayarlar (ev sahibi): tur sayısı 1 / 3 / 5, yol uzunluğu kısa (8-10 kare) / uzun (12-14 kare). Sonda kazanan, **Tekrar oyna** ve **Lobiye dön** çıkar.
+- Ayarlar (ev sahibi): tur sayısı 1 / 3 / 5, tahta 8 ya da 10 satır (varsayılan 10), Bak süresi 3 / 5 / 10 / 15 saniye (varsayılan 5). Sonda kazanan, **Tekrar oyna** ve **Lobiye dön** çıkar.
 - Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Gizli Yol seçilemez.
-- Bilinen sınır: yollar oda satırında durur (durum herkese açıktır); ekran bulma bitene kadar rakibin yolunu çizmez.
+- Eski odalar: eski kurallı (komşu kareli yol, "kısa/uzun" ayarı) bir oda lobideyse sessizce yeni kurallara geçer, eski ayar silinip yenisi varsayılan olur. Oyun ortasındaki eski bir odada hata mesajı çıkar, ev sahibi **Lobiye dön**'e basınca yeni kurallarla devam edilir.
+- Bilinen sınır: yollar oda satırında durur (durum herkese açıktır); ekran Bak süresi dışında rakibin yolunu çizmez.
 
 ### Gizli Görev
 İki ile dört kişi. Oyun ekranın dışında, konuşurken ya da mesajlaşırken oynanır; site görevleri dağıtır, puanı ve onayları tutar.
@@ -186,7 +186,7 @@ Hepsini bir arada: `for t in test/*.js; do node $t; done`
 `kelime-test.js` "Kelime düellosu" motorunu (renklendirme, Türkçe harfler, tur akışı, çakışma) ve yönlendiriciyi sınar;
 kendi küçük kelime listesini kullanır.
 `aynikafa-test.js` "Aynı Kafa" motorunu (Türkçe karşılaştırma, puanlama, aynı sayılsın oyu, uyum, ipucu tekrarı) ve yönlendiriciyi sınar.
-`gizliyol-test.js` "Gizli Yol" motorunu (yol kuralları, doğru ve yanlış adım, başa dönme, kalıcı işaret, pes, tur ve oyun sonu, beraberlik) ve yönlendiriciyi sınar.
+`gizliyol-test.js` "Gizli Yol" motorunu (satır başına bir kutu, 8 ve 10 satır, bakma hakkı ve süre ayarı, doğru ve yanlış tahmin, aynı satırda devam, işaretli kutu, sıra dışı satır, bitirme, tur ve oyun sonu, beraberlik, pes, eski oda uyumu) ve yönlendiriciyi sınar.
 `gorev-test.js` "Gizli Görev" motorunu (dağıtım, onay ve çoğunluk, yakalama, değiştirme hakkı, hedef puan ve süre bitişi, gizlilik yardımcıları) ve yönlendiriciyi sınar.
 `element-test.js` "Taş Kağıt Makas" motorunu (deste, dağıtım, yenme döngüsü, eski ateş/su/toprak anahtarlarının eşlenmesi, özel kartlar ve kombinasyonları, geçersiz seçimler, el tamamlama, hedef puan ve eller boşalınca bitiş, gizlilik yardımcısı) ve yönlendiriciyi sınar.
 `kule-test.js` "Risk Kulesi" motorunu (zar ekleme, 1'de yıkılma, çift kat, dur ve kasa, çatlak taş kuralları, hedefe ulaşma, sıra döngüsü, oyuncu ayrılınca sıra, sırayı geç) ve yönlendiriciyi sınar.
@@ -199,7 +199,7 @@ Hata varsa çıkış kodu 1 olur.
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
 - `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
 - `aynikafa-ekran.js`: "Aynı Kafa" ekranları (lobi ayarları, ipucu ve cevap, açılış kartları, oylar, sonuç)
-- `gizliyol-ekran.js`: "Gizli Yol" ekranları (lobi ayarları, yol çizme, bulma tahtası, rakip ilerlemesi, açık yollar, sonuç)
+- `gizliyol-ekran.js`: "Gizli Yol" ekranları (lobi ayarları, kutu seçme, Bak ve geri sayım, çözme tahtası, rakip ilerlemesi, açık yollar, sonuç)
 - `gorev-ekran.js`: "Gizli Görev" ekranları (lobi ayarları, görev kartları, onay ve yakalama soruları, puan tablosu, geri sayım, sonuç)
 - `element-ekran.js`: "Taş Kağıt Makas" ekranları (lobi ayarları, kartlar, masa ve açılış animasyonu, el şeridi, oynananlar şeridi, döngü şeması, sonuç)
 - `kule-ekran.js`: "Risk Kulesi" ekranları (lobi ayarları, kasalar, kule ve zar animasyonu, çatlak taş paneli ve uyarısı, sırayı geç, sonuç)
@@ -231,5 +231,5 @@ Hata varsa çıkış kodu 1 olur.
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar
-Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa), rakibin yolu (Gizli Yol), rakibin eli ve kilitli seçimi (Taş Kağıt Makas) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
+Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa), rakibin yolu (Gizli Yol; ekran yalnız Bak süresince gösterir), rakibin eli ve kilitli seçimi (Taş Kağıt Makas) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
 Satırın `oyun` sütunu hep `uno` kalır; gerçek oyun `durum.oyun` içindedir (böylece eski odalar ve veritabanı değişmeden çalışır).

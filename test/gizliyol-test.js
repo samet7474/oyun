@@ -1,22 +1,23 @@
 // "Gizli Yol" motoru ve oyun yönlendirici testleri. Çalıştır: node test/gizliyol-test.js
 import assert from 'node:assert/strict';
 import {
+  BAKMA_SURELERI,
   PES_HATASI,
+  SATIR_SAYILARI,
   TUR_SAYILARI,
-  YOL_UZUNLUKLARI,
+  eskiDurumMu,
   herkesBitti,
   kareUyarisi,
-  komsuMu,
+  kazananlar,
   lobiKur,
   oyuncuDurumu,
   oyunKazananlari,
+  satirSayisiOku,
+  siradakiSatir,
   sonrakiDogruKare,
   uygula,
   yeniOda,
   yolHatasi,
-  yolEnAz,
-  yolEnCok,
-  yolAyariniDuzelt,
 } from '../gizliyol.js';
 import { OYUNLAR, oyunId, uygula as yonlendir, yeniOda as yonlendirYeniOda } from '../oyunlar.js';
 
@@ -62,44 +63,14 @@ function dondur(x) {
   return x;
 }
 
-// Geçerli yollar (satır 0 üst, satır 5 alt)
-const YOL_A = [
-  [5, 0],
-  [5, 1],
-  [4, 1],
-  [3, 1],
-  [3, 2],
-  [2, 2],
-  [1, 2],
-  [0, 2],
-];
-
-const YOL_B = [
-  [5, 5],
-  [4, 5],
-  [3, 5],
-  [3, 4],
-  [2, 4],
-  [1, 4],
-  [1, 3],
-  [0, 3],
-];
-
-// 12 kare, kıvrımlı
-const YOL_UZUN = [
-  [5, 0],
-  [5, 1],
-  [5, 2],
-  [4, 2],
-  [4, 1],
-  [4, 0],
-  [3, 0],
-  [2, 0],
-  [1, 0],
-  [1, 1],
-  [1, 2],
-  [0, 2],
-];
+// n satırlık yol: her satırın sütunu (başlangic + satır) % 6
+function yolYap(n, baslangic) {
+  const yol = [];
+  for (let s = 0; s < n; s++) {
+    yol.push((baslangic + s) % 6);
+  }
+  return yol;
+}
 
 function lobi(ayar = {}, oyuncuSayisi = 2) {
   let d = yeniOda(pid(0), 'Ali');
@@ -119,11 +90,12 @@ function hazirOl(d, i, yol) {
   return basarili(u(d, { tip: 'hazir', id: pid(i), tur: d.tur, yol: yol }));
 }
 
-// Bulma aşamasına geçmiş oyun: oyuncu 0'ın yolu A, oyuncu 1'in yolu B
+// Bulma aşamasına geçmiş oyun: oyuncu 0'ın yolu başlangıç 0'dan, oyuncu 1'in yolu başlangıç 3'ten
 function bulmada(ayar = {}) {
+  const n = ayar.satirSayisi || 10;
   let d = baslat(ayar);
-  d = hazirOl(d, 0, ayar.enAzKare === 12 ? YOL_UZUN : YOL_A);
-  d = hazirOl(d, 1, ayar.enAzKare === 12 ? YOL_UZUN : YOL_B);
+  d = hazirOl(d, 0, yolYap(n, 0));
+  d = hazirOl(d, 1, yolYap(n, 3));
   return d;
 }
 
@@ -133,6 +105,21 @@ function kare(d, i, satir, sutun) {
 
 function dokun(d, i, satir, sutun) {
   return basarili(kare(d, i, satir, sutun));
+}
+
+function bak(d, i, zaman = 1000) {
+  return u(d, { tip: 'bak', id: pid(i), tur: d.tur, zaman: zaman });
+}
+
+// i. oyuncunun sıradaki satırında yanlış bir sütun (doğru sütun ve atlananlar dışında, ilk bulunan)
+function yanlisSutun(d, i, atla = []) {
+  const dogru = sonrakiDogruKare(d, i)[1];
+  for (let s = 0; s < 6; s++) {
+    if (s !== dogru && !atla.includes(s)) {
+      return s;
+    }
+  }
+  return -1;
 }
 
 // i. oyuncu hiç hata yapmadan rakibin yolunu bulur
@@ -145,23 +132,24 @@ function hatasizBul(d, i) {
   return simdi;
 }
 
-// i. oyuncu n kez yanlış basar (başlangıçta, alt satırda, doğru olmayan farklı karelere). En çok 5.
+// i. oyuncu sıradaki satırda n kez yanlış basar (en çok 5 farklı kutu)
 function hataYap(d, i, n) {
   let simdi = d;
-  const baslangic = simdi.yollar[1 - i][0];
+  const satir = sonrakiDogruKare(simdi, i)[0];
+  const dogru = sonrakiDogruKare(simdi, i)[1];
   let yapilan = 0;
   for (let sutun = 0; sutun < 6 && yapilan < n; sutun++) {
-    if (sutun === baslangic[1]) {
+    if (sutun === dogru) {
       continue;
     }
-    simdi = dokun(simdi, i, 5, sutun);
+    simdi = dokun(simdi, i, satir, sutun);
     yapilan += 1;
   }
-  assert.equal(yapilan, n, 'hataYap: en çok 5 yanlış başlangıç denenebilir');
+  assert.equal(yapilan, n, 'hataYap: bir satırda en çok 5 yanlış denenebilir');
   return simdi;
 }
 
-// Çok sayıda hatayı tek tek yapmak yerine sayacı doğrudan kurar (yalnız 25 hata testleri için)
+// Hata sayacını doğrudan kurar (yalnız 25 hata testleri için)
 function hataSayisiniKur(d, i, n) {
   const kopya = structuredClone(d);
   kopya.bulma[i].hata = n;
@@ -169,206 +157,39 @@ function hataSayisiniKur(d, i, n) {
 }
 
 // ---------------------------------------------------------------------------
-// Yol kuralları
+// Yol (satır başına bir kutu)
 // ---------------------------------------------------------------------------
 
-test('geçerli yollar kabul edilir', () => {
-  assert.equal(yolHatasi(YOL_A, 8), null);
-  assert.equal(yolHatasi(YOL_B, 8), null);
-  assert.equal(yolHatasi(YOL_UZUN, 12), null);
+test('yol: her satırdan bir kutu seçilince geçerli, 8 ve 10 satır', () => {
+  assert.equal(yolHatasi(yolYap(10, 0), 10), null);
+  assert.equal(yolHatasi(yolYap(8, 2), 8), null);
+  // Komşuluk şartı yok: ardışık satırlarda uzak sütunlar serbest
+  assert.equal(yolHatasi([0, 5, 0, 5, 0, 5, 0, 5], 8), null);
+  assert.equal(yolHatasi([3, 3, 3, 3, 3, 3, 3, 3, 3, 3], 10), null);
 });
 
-test('çapraz adım reddedilir', () => {
-  const yol = YOL_A.map((k) => k.slice());
-  yol[2] = [4, 2]; // (5,1) -> (4,2) çapraz
-  assert.match(yolHatasi(yol, 8), /yan yana ya da alt alta/);
-});
-
-test('aynı kareden iki kez geçilemez', () => {
-  const yol = [
-    [5, 0],
-    [5, 1],
-    [4, 1],
-    [4, 0],
-    [5, 0],
-    [5, 1],
-    [4, 1],
-    [3, 1],
-    [2, 1],
-    [1, 1],
-    [0, 1],
-  ];
-  assert.match(yolHatasi(yol, 8), /iki kez/);
-});
-
-test('çok kısa yol reddedilir, ayar uzun ise 12 kare gerekir', () => {
-  assert.match(yolHatasi(YOL_A.slice(0, 7), 8), /en az 8|üst satırda/);
-  assert.match(yolHatasi(YOL_A, 12), /en az 12/);
-  // 6 karelik düz yol geçerli bir yoldur ama 8'den kısadır
-  const duz = [
-    [5, 2],
-    [4, 2],
-    [3, 2],
-    [2, 2],
-    [1, 2],
-    [0, 2],
-  ];
-  assert.match(yolHatasi(duz, 8), /en az 8/);
-  assert.equal(yolHatasi(duz, 8) !== null, true);
-});
-
-// n kare uzunluğunda geçerli bir yol (6 ile 16 arası): alt satırdan üst satıra
-function yolOlustur(n) {
-  const yol = [];
-  if (n <= 11) {
-    // alt satırda sağa git, sonra üst satıra kadar çık
-    const yatay = n - 6;
-    for (let sutun = 0; sutun <= yatay; sutun++) {
-      yol.push([5, sutun]);
-    }
-    for (let satir = 4; satir >= 0; satir--) {
-      yol.push([satir, yatay]);
-    }
-    return yol;
-  }
-  // alt satırı sonuna kadar yürü, bir üst satırda geri dön, sonra yukarı çık
-  const geri = n - 11;
-  for (let sutun = 0; sutun <= 5; sutun++) {
-    yol.push([5, sutun]);
-  }
-  for (let sutun = 5; sutun >= 5 - geri; sutun--) {
-    yol.push([4, sutun]);
-  }
-  for (let satir = 3; satir >= 0; satir--) {
-    yol.push([satir, 5 - geri]);
-  }
-  return yol;
-}
-
-test('yol uzunluğu aralıkları: kısa 8-10, uzun 12-14', () => {
-  assert.equal(yolEnAz(8), 8);
-  assert.equal(yolEnCok(8), 10);
-  assert.equal(yolEnAz(12), 12);
-  assert.equal(yolEnCok(12), 14);
-  for (const n of [6, 7, 11, 12, 13, 14, 15, 16]) {
-    assert.equal(yolOlustur(n).length, n);
-    assert.equal(yolHatasi(yolOlustur(n), 100), yolHatasi(yolOlustur(n), 12));
-  }
-});
-
-test('kısa ayar: 7 kare az, 8 ve 10 kare geçerli, 11 kare fazla', () => {
-  assert.match(yolHatasi(yolOlustur(7), 8), /en az 8/);
-  assert.equal(yolHatasi(yolOlustur(8), 8), null);
-  assert.equal(yolHatasi(yolOlustur(9), 8), null);
-  assert.equal(yolHatasi(yolOlustur(10), 8), null);
-  assert.equal(yolHatasi(yolOlustur(11), 8), 'Yol en fazla 10 kare olabilir.');
-  assert.equal(yolHatasi(yolOlustur(16), 8), 'Yol en fazla 10 kare olabilir.');
-});
-
-test('uzun ayar: 11 kare az, 12 ve 14 kare geçerli, 15 kare fazla', () => {
-  assert.match(yolHatasi(yolOlustur(11), 12), /en az 12/);
-  assert.equal(yolHatasi(yolOlustur(12), 12), null);
-  assert.equal(yolHatasi(yolOlustur(13), 12), null);
-  assert.equal(yolHatasi(yolOlustur(14), 12), null);
-  assert.equal(yolHatasi(yolOlustur(15), 12), 'Yol en fazla 14 kare olabilir.');
-  assert.equal(yolHatasi(yolOlustur(16), 12), 'Yol en fazla 14 kare olabilir.');
-});
-
-test('tüm tahtayı dolaşan 36 karelik yol her iki ayarda da reddedilir', () => {
-  const hepsi = [];
-  for (let satir = 5; satir >= 0; satir--) {
-    for (let i = 0; i < 6; i++) {
-      const sutun = (5 - satir) % 2 === 0 ? i : 5 - i;
-      hepsi.push([satir, sutun]);
-    }
-  }
-  assert.equal(hepsi.length, 36);
-  assert.match(yolHatasi(hepsi, 8), /en fazla 10/);
-  assert.match(yolHatasi(hepsi, 12), /en fazla 14/);
-});
-
-test('motor: üst sınırı aşan yolla Hazırım reddedilir, sınırdaki yol kabul edilir', () => {
-  const kisa = baslat({ enAzKare: 8 });
-  assert.equal(hatali(u(kisa, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(11) })), 'Yol en fazla 10 kare olabilir.');
-  assert.equal(basarili(u(kisa, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(10) })).hazir[0], true);
-  assert.equal(basarili(u(kisa, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(8) })).hazir[0], true);
-  const uzun = baslat({ enAzKare: 12 });
-  assert.equal(hatali(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(15) })), 'Yol en fazla 14 kare olabilir.');
-  assert.equal(basarili(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(14) })).hazir[0], true);
-  assert.equal(basarili(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(12) })).hazir[0], true);
-});
-
-test('eski ayar değerleri yeni aralıklara eşlenir ve oda kırılmaz', () => {
-  assert.equal(yolAyariniDuzelt('kısa'), 8);
-  assert.equal(yolAyariniDuzelt('kisa'), 8);
-  assert.equal(yolAyariniDuzelt('Uzun'), 12);
-  assert.equal(yolAyariniDuzelt(8), 8);
-  assert.equal(yolAyariniDuzelt(12), 12);
-  assert.equal(yolAyariniDuzelt(10), 8);
-  assert.equal(yolAyariniDuzelt(14), 12);
-  assert.equal(yolAyariniDuzelt(undefined), 8);
-  assert.equal(yolAyariniDuzelt(null), 8);
-  assert.equal(yolEnCok('uzun'), 14);
-  assert.equal(yolEnCok('kısa'), 10);
-  // Odada eski biçimde ("uzun", "kısa", ayarsız) kayıtlı değerle oyun yine işler
-  const uzun = baslat({ enAzKare: 'uzun' });
-  assert.match(hatali(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(8) })), /en az 12/);
-  assert.equal(basarili(u(uzun, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(14) })).hazir[0], true);
-  const kisa = baslat({ enAzKare: 'kısa' });
-  assert.match(hatali(u(kisa, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(12) })), /en fazla 10/);
-  const ayarsiz = baslat({ enAzKare: undefined });
-  assert.equal(basarili(u(ayarsiz, { tip: 'hazir', id: pid(0), tur: 0, yol: yolOlustur(9) })).hazir[0], true);
-});
-
-test('alt satırdan başlamayan ve üst satırda bitmeyen yol reddedilir', () => {
-  const ortadanBaslayan = [
-    [4, 0],
-    [4, 1],
-    [3, 1],
-    [3, 2],
-    [2, 2],
-    [2, 3],
-    [1, 3],
-    [0, 3],
-  ];
-  assert.match(yolHatasi(ortadanBaslayan, 8), /alt satırdan başla/);
-  const ustteBaslayan = [
-    [0, 0],
-    [0, 1],
-    [1, 1],
-    [1, 2],
-    [2, 2],
-    [2, 3],
-    [3, 3],
-    [4, 3],
-  ];
-  assert.match(yolHatasi(ustteBaslayan, 8), /alt satırdan başla/);
-  // 8 kare, alttan başlıyor ama (1,3) ile bitiyor
-  const altaBiten = YOL_A.slice(0, 7).concat([[1, 3]]);
-  assert.match(yolHatasi(altaBiten, 8), /üst satırda bitmeli/);
-});
-
-test('tahta dışı, bozuk biçim ve boş yol reddedilir', () => {
-  assert.match(yolHatasi([], 8), /yol çiz/);
-  assert.match(yolHatasi(null, 8), /yol çiz/);
-  assert.match(yolHatasi('abc', 8), /yol çiz/);
-  assert.match(yolHatasi([[5, 6]], 8), /dışına/);
-  assert.match(yolHatasi([[5, -1]], 8), /dışına/);
-  assert.match(yolHatasi([[5.5, 1]], 8), /dışına/);
-  assert.match(yolHatasi([[5]], 8), /dışına/);
-  assert.match(yolHatasi([[6, 0]], 8), /dışına/);
-});
-
-test('komsuMu: yan yana ve alt alta komşu, çapraz ve aynı kare değil', () => {
-  assert.equal(komsuMu([2, 2], [2, 3]), true);
-  assert.equal(komsuMu([2, 2], [3, 2]), true);
-  assert.equal(komsuMu([2, 2], [3, 3]), false);
-  assert.equal(komsuMu([2, 2], [2, 2]), false);
-  assert.equal(komsuMu([2, 2], [2, 4]), false);
+test('yol: eksik, fazla ya da geçersiz sütunlu yol reddedilir', () => {
+  assert.match(yolHatasi(yolYap(9, 0), 10), /her satırdan/i);
+  assert.match(yolHatasi(yolYap(11, 0), 10), /her satırdan/i);
+  assert.match(yolHatasi(yolYap(10, 0), 8), /8 satır/);
+  assert.match(yolHatasi(null, 10), /her satırdan/i);
+  assert.match(yolHatasi(undefined, 10), /her satırdan/i);
+  const bosluklu = yolYap(10, 0);
+  bosluklu[4] = null;
+  assert.match(yolHatasi(bosluklu, 10), /her satırdan/i);
+  const disarida = yolYap(10, 0);
+  disarida[2] = 6;
+  assert.match(yolHatasi(disarida, 10), /her satırdan/i);
+  disarida[2] = -1;
+  assert.notEqual(yolHatasi(disarida, 10), null);
+  disarida[2] = 1.5;
+  assert.notEqual(yolHatasi(disarida, 10), null);
+  disarida[2] = '2';
+  assert.notEqual(yolHatasi(disarida, 10), null);
 });
 
 // ---------------------------------------------------------------------------
-// Lobi
+// Oda ve lobi
 // ---------------------------------------------------------------------------
 
 test('yeni oda: gizliyol lobisi, varsayılan ayarlar', () => {
@@ -376,48 +197,63 @@ test('yeni oda: gizliyol lobisi, varsayılan ayarlar', () => {
   assert.equal(d.oyun, 'gizliyol');
   assert.equal(d.asama, 'lobi');
   assert.equal(d.sahip, 'a');
-  assert.equal(d.ayar.turSayisi, 3);
-  assert.equal(d.ayar.enAzKare, 8);
-  assert.deepEqual(TUR_SAYILARI, [1, 3, 5]);
-  assert.deepEqual(YOL_UZUNLUKLARI, [8, 12]);
+  assert.deepEqual(d.ayar, { turSayisi: 3, satirSayisi: 10, bakmaSuresi: 5 });
+  assert.equal(d.oyuncular.length, 1);
+  assert.equal(eskiDurumMu(d), false);
 });
 
 test('tam 2 oyuncu: üçüncü katılamaz, bir kişiyle başlamaz', () => {
-  const d = lobi();
-  assert.match(hatali(u(d, { tip: 'katil', id: 'x', ad: 'Üç' })), /dolu/);
-  assert.match(hatali(u(yeniOda(pid(0), 'Ali'), { tip: 'baslat', id: pid(0) })), /tam 2/);
+  const tek = yeniOda(pid(0), 'Ali');
+  assert.match(hatali(u(tek, { tip: 'baslat', id: pid(0) })), /2 kişi/);
+  const iki = lobi();
+  assert.match(hatali(u(iki, { tip: 'katil', id: pid(2), ad: 'Cem' })), /dolu/);
 });
 
 test('katılma: aynı kişi iki kez eklenmez, aynı ad ayrılır, başlayan oyuna girilmez', () => {
-  let d = yeniOda(pid(0), 'Ali');
-  d = basarili(u(d, { tip: 'katil', id: pid(0), ad: 'Ali' }));
-  assert.equal(d.oyuncular.length, 1);
-  d = basarili(u(d, { tip: 'katil', id: pid(1), ad: 'Ali' }));
-  assert.equal(d.oyuncular.length, 2);
-  assert.notEqual(d.oyuncular[0].ad, d.oyuncular[1].ad);
-  const basladi = baslat();
-  assert.match(hatali(u(basladi, { tip: 'katil', id: 'x', ad: 'Üç' })), /başladı/);
+  const d = lobi({}, 1);
+  const ayni = basarili(u(d, { tip: 'katil', id: pid(0), ad: 'Ali' }));
+  assert.equal(ayni.oyuncular.length, 1);
+  const ikinci = basarili(u(d, { tip: 'katil', id: pid(1), ad: 'Ali' }));
+  assert.notEqual(ikinci.oyuncular[0].ad, ikinci.oyuncular[1].ad);
+  const baslamis = baslat();
+  assert.match(hatali(u(baslamis, { tip: 'katil', id: pid(5), ad: 'Cem' })), /başladı/);
+});
+
+test('ayarlar: satır sayısı 8 ya da 10, süre 3/5/10/15, tur 1/3/5', () => {
+  assert.deepEqual(SATIR_SAYILARI, [8, 10]);
+  assert.deepEqual(BAKMA_SURELERI, [3, 5, 10, 15]);
+  assert.deepEqual(TUR_SAYILARI, [1, 3, 5]);
+  let d = lobi();
+  d = basarili(u(d, { tip: 'ayarla', id: pid(0), ayar: { satirSayisi: 8 } }));
+  assert.equal(d.ayar.satirSayisi, 8);
+  assert.equal(d.ayar.bakmaSuresi, 5);
+  for (const sure of BAKMA_SURELERI) {
+    d = basarili(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: sure } }));
+    assert.equal(d.ayar.bakmaSuresi, sure);
+  }
+  d = basarili(u(d, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 5, satirSayisi: 10, bakmaSuresi: 3 } }));
+  assert.deepEqual(d.ayar, { turSayisi: 5, satirSayisi: 10, bakmaSuresi: 3 });
 });
 
 test('ayarlar: yalnız ev sahibi ve lobide, geçersiz değer reddedilir', () => {
   const d = lobi();
-  const yeni = basarili(u(d, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 5, enAzKare: 12 } }));
-  assert.equal(yeni.ayar.turSayisi, 5);
-  assert.equal(yeni.ayar.enAzKare, 12);
-  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(1), ayar: { turSayisi: 1 } })), /ev sahibi/);
-  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 2 } })), /tur sayısı/);
-  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { enAzKare: 10 } })), /uzunluğu/);
-  const basladi = baslat();
-  assert.match(hatali(u(basladi, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 1 } })), /başlamadan/);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(1), ayar: { turSayisi: 5 } })), /ev sahibi/);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 4 } })), /tur/i);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { satirSayisi: 9 } })), /satır/i);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { satirSayisi: 12 } })), /satır/i);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: 7 } })), /süre/i);
+  assert.match(hatali(u(d, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: 20 } })), /süre/i);
+  const oyunda = baslat();
+  assert.match(hatali(u(oyunda, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 5 } })), /başlamadan/);
 });
 
 test('çıkma: lobide çıkılır, ev sahibi çıkınca sahiplik geçer, oyun sürerken çıkılmaz', () => {
-  let d = lobi();
-  d = basarili(u(d, { tip: 'cikar', id: pid(0) }));
-  assert.equal(d.oyuncular.length, 1);
-  assert.equal(d.sahip, pid(1));
+  const d = lobi();
+  const cikti = basarili(u(d, { tip: 'cikar', id: pid(0) }));
+  assert.equal(cikti.oyuncular.length, 1);
+  assert.equal(cikti.sahip, pid(1));
+  assert.match(hatali(u(d, { tip: 'cikar', id: pid(1), hedef: pid(0) })), /ev sahibi/);
   assert.match(hatali(u(baslat(), { tip: 'cikar', id: pid(1) })), /sürerken/);
-  assert.match(hatali(u(lobi(), { tip: 'cikar', id: pid(1), hedef: pid(0) })), /ev sahibi/);
 });
 
 test('başlatma: yalnız ev sahibi, kurma aşaması açılır, yollar ve işaretler boş', () => {
@@ -428,250 +264,313 @@ test('başlatma: yalnız ev sahibi, kurma aşaması açılır, yollar ve işaret
   assert.equal(b.tur, 0);
   assert.deepEqual(b.yollar, [null, null]);
   assert.deepEqual(b.hazir, [false, false]);
-  assert.equal(b.bulma[0].hata, 0);
+  assert.equal(b.bulma.length, 2);
+  b.bulma.forEach((x) => {
+    assert.equal(x.bulunan, 0);
+    assert.equal(x.hata, 0);
+    assert.deepEqual(x.yanlislar, []);
+    assert.equal(x.bakti, false);
+    assert.equal(x.tahminYapti, false);
+    assert.equal(x.bitti, false);
+  });
   assert.match(hatali(u(b, { tip: 'baslat', id: pid(0) })), /zaten/);
 });
 
 // ---------------------------------------------------------------------------
-// Kurma aşaması
+// Kurma
 // ---------------------------------------------------------------------------
 
-test('hazır: geçersiz yol durumu değiştirmez', () => {
+test('hazır: eksik satırlı yol reddedilir, durum değişmez', () => {
   const d = baslat();
-  const capraz = YOL_A.map((k) => k.slice());
-  capraz[3] = [2, 2];
-  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: capraz })), /yan yana/);
-  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: YOL_A.slice(0, 5) })), /üst satırda|en az/);
-  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: undefined })), /yol çiz/);
-  assert.equal(d.hazir[0], false);
-  assert.equal(d.yollar[0], null);
+  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: yolYap(9, 0) })), /her satırdan/i);
+  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: [] })), /her satırdan/i);
+  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0 })), /her satırdan/i);
+  const bosluklu = yolYap(10, 0);
+  bosluklu[9] = null;
+  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: bosluklu })), /her satırdan/i);
+  assert.deepEqual(d.hazir, [false, false]);
+});
+
+test('hazır: 10 satır ayarında 10, 8 satır ayarında 8 satırlık yol gerekir', () => {
+  const on = baslat({ satirSayisi: 10 });
+  assert.equal(hazirOl(on, 0, yolYap(10, 1)).hazir[0], true);
+  assert.match(hatali(u(on, { tip: 'hazir', id: pid(0), tur: 0, yol: yolYap(8, 1) })), /10 satır/);
+  const sekiz = baslat({ satirSayisi: 8 });
+  assert.equal(hazirOl(sekiz, 0, yolYap(8, 1)).hazir[0], true);
+  assert.match(hatali(u(sekiz, { tip: 'hazir', id: pid(0), tur: 0, yol: yolYap(10, 1) })), /8 satır/);
 });
 
 test('hazır: yol kaydedilir, ikisi de hazır olunca bulma başlar', () => {
   let d = baslat();
-  d = hazirOl(d, 0, YOL_A);
+  d = hazirOl(d, 0, yolYap(10, 0));
   assert.equal(d.asama, 'kurma');
-  assert.deepEqual(d.hazir, [true, false]);
-  assert.deepEqual(d.yollar[0], YOL_A);
-  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: YOL_A })), /Zaten hazırsın/);
-  d = hazirOl(d, 1, YOL_B);
+  assert.deepEqual(d.yollar[0], yolYap(10, 0));
+  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: yolYap(10, 1) })), /zaten hazırsın/i);
+  d = hazirOl(d, 1, yolYap(10, 3));
   assert.equal(d.asama, 'bulma');
-  assert.deepEqual(d.yollar[1], YOL_B);
-});
-
-test('hazır: yol ayardaki uzunluğa uymalı (uzun ayarda 8 kare yetmez)', () => {
-  const d = baslat({ enAzKare: 12 });
-  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 0, yol: YOL_A })), /en az 12/);
-  const yeni = hazirOl(d, 0, YOL_UZUN);
-  assert.equal(yeni.hazir[0], true);
+  assert.deepEqual(d.yollar[1], yolYap(10, 3));
 });
 
 test('hazır: yanlış tur, odada olmayan ve yanlış aşama', () => {
   const d = baslat();
-  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 3, yol: YOL_A })), /geçti/);
-  assert.match(hatali(u(d, { tip: 'hazir', id: 'yok', tur: 0, yol: YOL_A })), /odada değilsin/);
-  assert.match(hatali(u(lobi(), { tip: 'hazir', id: pid(0), yol: YOL_A })), /yol çizilmez/);
+  assert.match(hatali(u(d, { tip: 'hazir', id: pid(0), tur: 4, yol: yolYap(10, 0) })), /geçti/);
+  assert.match(hatali(u(d, { tip: 'hazir', id: 'yok', tur: 0, yol: yolYap(10, 0) })), /odada değilsin/);
+  assert.match(hatali(u(lobi(), { tip: 'hazir', id: pid(0), yol: yolYap(10, 0) })), /seçilmez/);
 });
 
 test('hazirIptal: rakip hazır olmadan yol geri alınır ve değiştirilir', () => {
   let d = baslat();
-  d = hazirOl(d, 0, YOL_A);
+  d = hazirOl(d, 0, yolYap(10, 0));
   d = basarili(u(d, { tip: 'hazirIptal', id: pid(0), tur: 0 }));
-  assert.deepEqual(d.hazir, [false, false]);
+  assert.equal(d.hazir[0], false);
   assert.equal(d.yollar[0], null);
-  const yeniYol = yolOlustur(10);
-  d = hazirOl(d, 0, yeniYol);
-  assert.deepEqual(d.yollar[0], yeniYol);
-  d = hazirOl(d, 1, YOL_B);
-  assert.equal(d.asama, 'bulma');
+  d = hazirOl(d, 0, yolYap(10, 2));
+  assert.deepEqual(d.yollar[0], yolYap(10, 2));
+  // İkisi de hazırsa bulma başladı, yol değişmez
+  d = hazirOl(d, 1, yolYap(10, 3));
   assert.match(hatali(u(d, { tip: 'hazirIptal', id: pid(0), tur: 0 })), /değişmez/);
 });
 
 test('gönderilen yolun kopyası saklanır, sonradan değişse de etkilenmez', () => {
-  const yol = YOL_A.map((k) => k.slice());
+  const yol = yolYap(10, 0);
   let d = baslat();
   d = hazirOl(d, 0, yol);
-  yol[0][0] = 0;
-  assert.equal(d.yollar[0][0][0], 5);
+  yol[0] = 5;
+  assert.equal(d.yollar[0][0], 0);
 });
 
 // ---------------------------------------------------------------------------
-// Bulma aşaması
+// Bakma
 // ---------------------------------------------------------------------------
 
-test('bulma: başlangıç yalnız alt satırda aranır, başka satıra dokunmak uyarıdır (hata değil)', () => {
-  const d = bulmada();
-  const hata = hatali(kare(d, 0, 3, 1));
-  assert.match(hata, /alt satır/);
-  assert.equal(d.bulma[0].hata, 0);
-  assert.equal(kareUyarisi(d, 0, 3, 1).neden, 'baslangic');
-});
-
-test('bulma: doğru başlangıç karesi yolu bir kare uzatır', () => {
+test('bak: bulma aşamasında bir kez kullanılır, ikincisi reddedilir', () => {
   let d = bulmada();
-  // Oyuncu 0, oyuncu 1'in yolunu arar: başlangıç (5,5)
-  d = dokun(d, 0, 5, 5);
+  d = basarili(bak(d, 0, 12345));
+  const durum = oyuncuDurumu(d, 0);
+  assert.equal(durum.bakti, true);
+  assert.equal(durum.bakmaZamani, 12345);
+  assert.equal(durum.bakabilir, false);
+  assert.match(hatali(bak(d, 0)), /zaten baktın/);
+  // Rakip bu turda bakmadı, o kendi hakkını kullanabilir
+  assert.equal(oyuncuDurumu(d, 1).bakti, false);
+  assert.equal(oyuncuDurumu(d, 1).bakabilir, true);
+  d = basarili(bak(d, 1, 20000));
+  assert.equal(oyuncuDurumu(d, 1).bakti, true);
+});
+
+test('bak: yanlış aşama, yanlış tur ve odada olmayan reddedilir', () => {
+  assert.match(hatali(u(baslat(), { tip: 'bak', id: pid(0), tur: 0, zaman: 1 })), /bakılmaz/);
+  assert.match(hatali(u(lobi(), { tip: 'bak', id: pid(0), zaman: 1 })), /bakılmaz/);
+  const d = bulmada();
+  assert.match(hatali(u(d, { tip: 'bak', id: pid(0), tur: 3, zaman: 1 })), /geçti/);
+  assert.match(hatali(u(d, { tip: 'bak', id: 'yok', tur: 0, zaman: 1 })), /odada değilsin/);
+});
+
+test('bak: ilk tahminden sonra bakılamaz (doğru tahmin de hakkı yakar)', () => {
+  let d = bulmada();
+  const hedef = sonrakiDogruKare(d, 0);
+  d = dokun(d, 0, hedef[0], hedef[1]);
+  assert.equal(oyuncuDurumu(d, 0).tahminYapti, true);
+  assert.equal(oyuncuDurumu(d, 0).bakabilir, false);
+  assert.match(hatali(bak(d, 0)), /artık bakamazsın/);
+  assert.equal(oyuncuDurumu(d, 0).bakti, false);
+  // Rakibin hakkı etkilenmez
+  assert.equal(oyuncuDurumu(d, 1).bakabilir, true);
+});
+
+test('bak: yanlış tahmin de hakkı yakar', () => {
+  let d = bulmada();
+  d = dokun(d, 0, 9, yanlisSutun(d, 0));
+  assert.match(hatali(bak(d, 0)), /artık bakamazsın/);
+});
+
+test('bak: baktıktan sonra tahmin yapılabilir, süre ayarı değerleri hepsi kabul edilir', () => {
+  for (const sure of BAKMA_SURELERI) {
+    let d = bulmada({ bakmaSuresi: sure });
+    assert.equal(d.ayar.bakmaSuresi, sure);
+    d = basarili(bak(d, 0, 5));
+    const hedef = sonrakiDogruKare(d, 0);
+    d = dokun(d, 0, hedef[0], hedef[1]);
+    assert.equal(oyuncuDurumu(d, 0).bulunan, 1);
+    assert.equal(oyuncuDurumu(d, 0).bakti, true);
+  }
+});
+
+test('bak: zaman verilmezse null kalır, yine de baktı sayılır', () => {
+  let d = bulmada();
+  d = basarili(u(d, { tip: 'bak', id: pid(0), tur: 0 }));
+  assert.equal(oyuncuDurumu(d, 0).bakti, true);
+  assert.equal(oyuncuDurumu(d, 0).bakmaZamani, null);
+});
+
+test('bak: bitiren oyuncu bakamaz', () => {
+  let d = bulmada();
+  d = hatasizBul(d, 0);
+  assert.match(hatali(bak(d, 0)), /bitirdin/);
+});
+
+test('bak: yeni turda hak yenilenir', () => {
+  let d = bulmada();
+  d = basarili(bak(d, 0));
+  d = hatasizBul(d, 0);
+  d = hatasizBul(d, 1);
+  d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 0 }));
+  d = hazirOl(d, 0, yolYap(10, 0));
+  d = hazirOl(d, 1, yolYap(10, 1));
+  assert.equal(oyuncuDurumu(d, 0).bakti, false);
+  assert.equal(oyuncuDurumu(d, 0).bakabilir, true);
+  d = basarili(bak(d, 0));
+  assert.equal(oyuncuDurumu(d, 0).bakti, true);
+});
+
+// ---------------------------------------------------------------------------
+// Çözme
+// ---------------------------------------------------------------------------
+
+test('çözme: sıra alt satırdan başlar, doğru kutu satırı geçirir', () => {
+  let d = bulmada();
+  assert.equal(siradakiSatir(d, 0), 9);
+  assert.deepEqual(sonrakiDogruKare(d, 0), [9, d.yollar[1][9]]);
+  const hedef = sonrakiDogruKare(d, 0);
+  d = dokun(d, 0, hedef[0], hedef[1]);
   assert.equal(oyuncuDurumu(d, 0).bulunan, 1);
   assert.equal(oyuncuDurumu(d, 0).hata, 0);
-  d = dokun(d, 0, 4, 5);
-  assert.equal(oyuncuDurumu(d, 0).bulunan, 2);
-  // Diğer oyuncunun ilerlemesi ayrıdır
-  assert.equal(oyuncuDurumu(d, 1).bulunan, 0);
+  assert.equal(siradakiSatir(d, 0), 8);
+  assert.deepEqual(sonrakiDogruKare(d, 0), [8, d.yollar[1][8]]);
 });
 
-test('bulma: yanlış başlangıç hatadır, kalıcı işaret kalır', () => {
+test('çözme: yanlış kutu hata +1, kalıcı işaret, aynı satırda devam (başa dönme yok)', () => {
   let d = bulmada();
-  d = dokun(d, 0, 5, 0);
-  const o = oyuncuDurumu(d, 0);
-  assert.equal(o.hata, 1);
-  assert.equal(o.bulunan, 0);
-  assert.deepEqual(d.bulma[0].yanlislar, [{ satir: 5, sutun: 0, adim: 0 }]);
-});
-
-test('bulma: yanlış adım başa döndürür, bulunanlar gizlenir, işaret kalır', () => {
-  let d = bulmada();
-  d = dokun(d, 0, 5, 5);
-  d = dokun(d, 0, 4, 5);
-  d = dokun(d, 0, 3, 5);
-  assert.equal(oyuncuDurumu(d, 0).bulunan, 3);
-  // (3,5)'ten sonra doğru kare (3,4); yanlış komşu (2,5)
-  d = dokun(d, 0, 2, 5);
-  const o = oyuncuDurumu(d, 0);
-  assert.equal(o.bulunan, 0);
-  assert.equal(o.hata, 1);
-  assert.deepEqual(d.bulma[0].yanlislar, [{ satir: 2, sutun: 5, adim: 3 }]);
-  // Yolu baştan yürümek gerekir: önce başlangıç karesi
-  assert.match(hatali(kare(d, 0, 4, 5)), /alt satır/);
-  d = dokun(d, 0, 5, 5);
-  assert.equal(oyuncuDurumu(d, 0).bulunan, 1);
-  // Kırmızı işaret hâlâ duruyor
-  assert.equal(d.bulma[0].yanlislar.length, 1);
-});
-
-test('bulma: komşu olmayan kareye dokunmak hata sayılmaz, yalnız uyarıdır', () => {
-  let d = bulmada();
-  d = dokun(d, 0, 5, 5);
-  assert.match(hatali(kare(d, 0, 2, 2)), /yanındaki/); // uzak kare
-  assert.match(hatali(kare(d, 0, 4, 4)), /yanındaki/); // çapraz
-  assert.equal(d.bulma[0].hata, 0);
-  assert.equal(kareUyarisi(d, 0, 4, 4).neden, 'komsu');
-});
-
-test('bulma: aynı yanlış kareye tekrar basmak hata saymaz, yalnız uyarır', () => {
-  let d = bulmada();
-  d = dokun(d, 0, 5, 0); // yanlış başlangıç
+  const ilk = sonrakiDogruKare(d, 0);
+  d = dokun(d, 0, ilk[0], ilk[1]);
+  d = dokun(d, 0, 8, yanlisSutun(d, 0));
   assert.equal(oyuncuDurumu(d, 0).hata, 1);
-  assert.match(hatali(kare(d, 0, 5, 0)), /yanlıştı/);
-  assert.equal(oyuncuDurumu(d, 0).hata, 1);
+  assert.equal(oyuncuDurumu(d, 0).bulunan, 1); // bulunan satır korunur
+  assert.equal(siradakiSatir(d, 0), 8); // aynı satır
   assert.equal(d.bulma[0].yanlislar.length, 1);
-  assert.equal(kareUyarisi(d, 0, 5, 0).neden, 'denendi');
-  // Başka bir yanlış kare yine hata sayılır
-  d = dokun(d, 0, 5, 1);
+  assert.equal(d.bulma[0].yanlislar[0].satir, 8);
+  // Aynı satırda ikinci yanlış, sonra doğru
+  const ikinci = yanlisSutun(d, 0, [d.bulma[0].yanlislar[0].sutun]);
+  d = dokun(d, 0, 8, ikinci);
   assert.equal(oyuncuDurumu(d, 0).hata, 2);
+  const dogru = sonrakiDogruKare(d, 0);
+  d = dokun(d, 0, dogru[0], dogru[1]);
+  assert.equal(oyuncuDurumu(d, 0).bulunan, 2);
+  assert.equal(oyuncuDurumu(d, 0).hata, 2);
+  assert.equal(d.bulma[0].yanlislar.length, 2); // işaretler kalır
 });
 
-test('bulma: işaretli kare başka adımda ayrıca denenir (işaret yalnız o adım için)', () => {
-  // Oyuncu 1'in yolu: (5,0) (4,0) (3,0) (3,1) (4,1) ...
-  const yolU = [
-    [5, 0],
-    [4, 0],
-    [3, 0],
-    [3, 1],
-    [4, 1],
-    [4, 2],
-    [3, 2],
-    [2, 2],
-    [1, 2],
-    [0, 2],
-  ];
-  let d = baslat();
-  d = hazirOl(d, 0, YOL_A);
-  d = hazirOl(d, 1, yolU);
-  d = dokun(d, 0, 5, 0);
-  d = dokun(d, 0, 4, 0);
-  d = dokun(d, 0, 3, 0);
-  d = dokun(d, 0, 3, 1);
-  assert.equal(oyuncuDurumu(d, 0).bulunan, 4);
-  // 4. adımda doğru kare (4,1); yanlış (2,1) deniyoruz
-  d = dokun(d, 0, 2, 1);
-  assert.equal(oyuncuDurumu(d, 0).hata, 1);
-  assert.deepEqual(d.bulma[0].yanlislar[0], { satir: 2, sutun: 1, adim: 4 });
-  // Başa dönüldü; (2,1) başka adımda komşu olabilir ama aynı adımda tekrar uyarı verir
-  d = dokun(d, 0, 5, 0);
-  d = dokun(d, 0, 4, 0);
-  d = dokun(d, 0, 3, 0);
-  d = dokun(d, 0, 3, 1);
-  assert.match(hatali(kare(d, 0, 2, 1)), /yanlıştı/);
-  assert.equal(oyuncuDurumu(d, 0).hata, 1);
-});
-
-test('bulma: bulunmuş kareye tekrar dokunmak uyarıdır', () => {
+test('çözme: işaretli kutuya tekrar dokunmak hata saymaz, uyarı verir', () => {
   let d = bulmada();
-  d = dokun(d, 0, 5, 5);
-  d = dokun(d, 0, 4, 5);
-  assert.match(hatali(kare(d, 0, 5, 5)), /zaten buldun/);
-  assert.match(hatali(kare(d, 0, 4, 5)), /zaten buldun/);
+  const yanlis = yanlisSutun(d, 0);
+  d = dokun(d, 0, 9, yanlis);
+  const once = oyuncuDurumu(d, 0).hata;
+  const uyari = kareUyarisi(d, 0, 9, yanlis);
+  assert.equal(uyari.neden, 'isaretli');
+  assert.match(hatali(kare(d, 0, 9, yanlis)), /yanlıştı/);
+  assert.equal(oyuncuDurumu(d, 0).hata, once);
+  assert.equal(d.bulma[0].yanlislar.length, 1);
+});
+
+test('çözme: sıradaki satır dışına dokunmak hata sayılmaz, yalnız uyarıdır', () => {
+  let d = bulmada();
+  // Üst satıra atlamak
+  assert.equal(kareUyarisi(d, 0, 0, 2).neden, 'sira');
+  assert.match(hatali(kare(d, 0, 0, 2)), /Sıra alttan 1\. satırda/);
+  assert.match(hatali(kare(d, 0, 5, 2)), /Sıra alttan 1\. satırda/);
+  assert.equal(oyuncuDurumu(d, 0).hata, 0);
+  assert.equal(oyuncuDurumu(d, 0).tahminYapti, false); // uyarı Bak hakkını yakmaz
+  assert.equal(oyuncuDurumu(d, 0).bakabilir, true);
+  // Bir satır bulunduktan sonra altındaki satıra dokunmak
+  const hedef = sonrakiDogruKare(d, 0);
+  d = dokun(d, 0, hedef[0], hedef[1]);
+  assert.equal(kareUyarisi(d, 0, 9, 0).neden, 'bulundu');
+  assert.match(hatali(kare(d, 0, 9, 0)), /zaten buldun/);
+  assert.match(hatali(kare(d, 0, 3, 0)), /Sıra alttan 2\. satırda/);
   assert.equal(oyuncuDurumu(d, 0).hata, 0);
 });
 
-test('bulma: tahta dışı kare, yanlış tur, yanlış aşama, odada olmayan', () => {
+test('çözme: tahta dışı kutu, yanlış tur, yanlış aşama, odada olmayan', () => {
   const d = bulmada();
-  assert.match(hatali(kare(d, 0, 9, 9)), /tahtada yok/);
-  assert.match(hatali(u(d, { tip: 'kare', id: pid(0), tur: 4, satir: 5, sutun: 5 })), /geçti/);
-  assert.match(hatali(u(d, { tip: 'kare', id: 'yok', tur: 0, satir: 5, sutun: 5 })), /odada değilsin/);
-  assert.match(hatali(u(baslat(), { tip: 'kare', id: pid(0), tur: 0, satir: 5, sutun: 0 })), /kare seçilmez/);
+  assert.match(hatali(kare(d, 0, 10, 0)), /tahtada yok/);
+  assert.match(hatali(kare(d, 0, -1, 0)), /tahtada yok/);
+  assert.match(hatali(kare(d, 0, 9, 6)), /tahtada yok/);
+  assert.match(hatali(kare(d, 0, 9, 1.5)), /tahtada yok/);
+  assert.match(hatali(u(d, { tip: 'kare', id: pid(0), tur: 7, satir: 9, sutun: 0 })), /geçti/);
+  assert.match(hatali(kare(d, 9, 9, 0)), /odada değilsin/);
+  assert.match(hatali(u(baslat(), { tip: 'kare', id: pid(0), tur: 0, satir: 9, sutun: 0 })), /seçilmez/);
 });
 
-test('bulma: yolun sonuna ulaşan oyuncu bitirir, rakip sürerken tur açılmaz', () => {
-  let d = bulmada();
+test('çözme: 8 satırlık tahtada alt satır 7, 8. satır yoktur', () => {
+  let d = bulmada({ satirSayisi: 8 });
+  assert.equal(satirSayisiOku(d), 8);
+  assert.equal(siradakiSatir(d, 0), 7);
+  assert.match(hatali(kare(d, 0, 8, 0)), /tahtada yok/);
+  assert.match(hatali(kare(d, 0, 9, 0)), /tahtada yok/);
   d = hatasizBul(d, 0);
-  const o = oyuncuDurumu(d, 0);
-  assert.equal(o.bitti, true);
-  assert.equal(o.hata, 0);
-  assert.equal(o.bulunan, YOL_B.length);
-  assert.equal(d.asama, 'bulma');
-  assert.equal(herkesBitti(d), false);
-  assert.match(hatali(kare(d, 0, 5, 5)), /bitirdin/);
-  // Rakip hâlâ oynayabilir
-  d = dokun(d, 1, 5, 0);
-  assert.equal(oyuncuDurumu(d, 1).bulunan, 1);
-});
-
-test('bulma: iki oyuncu aynı anda oynar, biri diğerinin ilerlemesini bozmaz', () => {
-  let d = bulmada();
-  d = dokun(d, 0, 5, 5);
-  d = dokun(d, 1, 5, 0);
-  d = dokun(d, 0, 4, 5);
-  d = dokun(d, 1, 5, 1);
-  assert.equal(oyuncuDurumu(d, 0).bulunan, 2);
-  assert.equal(oyuncuDurumu(d, 1).bulunan, 2);
-});
-
-test('bulma: uzun yolda (12 kare) da sonuna kadar gidilir', () => {
-  let d = bulmada({ enAzKare: 12 });
-  d = hatasizBul(d, 0);
-  assert.equal(oyuncuDurumu(d, 0).bulunan, 12);
+  assert.equal(oyuncuDurumu(d, 0).bulunan, 8);
   assert.equal(oyuncuDurumu(d, 0).bitti, true);
 });
 
+test('çözme: 10 satırlık tahtada bütün satırları bulan bitirir', () => {
+  let d = bulmada({ satirSayisi: 10 });
+  d = hatasizBul(d, 0);
+  assert.equal(oyuncuDurumu(d, 0).bulunan, 10);
+  assert.equal(oyuncuDurumu(d, 0).bitti, true);
+  assert.equal(d.asama, 'bulma'); // rakip sürerken tur açılmaz
+  assert.equal(siradakiSatir(d, 0), null);
+  assert.match(hatali(kare(d, 0, 0, 0)), /bitirdin/);
+});
+
+test('çözme: iki oyuncu aynı anda oynar, biri diğerinin ilerlemesini bozmaz', () => {
+  let d = bulmada();
+  const a = sonrakiDogruKare(d, 0);
+  d = dokun(d, 0, a[0], a[1]);
+  d = dokun(d, 1, 9, yanlisSutun(d, 1));
+  assert.equal(oyuncuDurumu(d, 0).bulunan, 1);
+  assert.equal(oyuncuDurumu(d, 0).hata, 0);
+  assert.equal(oyuncuDurumu(d, 1).bulunan, 0);
+  assert.equal(oyuncuDurumu(d, 1).hata, 1);
+});
+
+test('çözme: hata çok olsa da en sonunda bulan bitirir', () => {
+  let d = bulmada();
+  d = hataYap(d, 0, 4);
+  d = hatasizBul(d, 0);
+  assert.equal(oyuncuDurumu(d, 0).bitti, true);
+  assert.equal(oyuncuDurumu(d, 0).hata, 4);
+});
+
 // ---------------------------------------------------------------------------
-// Tur sonu, oyun sonu
+// Tur ve oyun sonu
 // ---------------------------------------------------------------------------
 
 test('tur sonu: az hata yapan turu alır, yollar ve hatalar açık kalır', () => {
-  let d = bulmada({ turSayisi: 3 });
-  d = hataYap(d, 1, 2); // oyuncu 1: 2 hata
-  d = hatasizBul(d, 0); // oyuncu 0: 0 hata
-  assert.equal(d.asama, 'bulma');
+  let d = bulmada();
+  d = hataYap(d, 0, 2);
+  d = hatasizBul(d, 0);
   d = hatasizBul(d, 1);
   assert.equal(d.asama, 'acik');
-  assert.equal(d.oyuncular[0].puan, 1);
-  assert.equal(d.oyuncular[1].puan, 0);
-  assert.deepEqual(d.gecmis, [{ hatalar: [0, 2], kazanan: 0 }]);
-  // Sonuçta iki yol da ve işaretler durumda
-  assert.deepEqual(d.yollar[0], YOL_A);
-  assert.deepEqual(d.yollar[1], YOL_B);
-  assert.equal(d.bulma[1].yanlislar.length, 2);
+  assert.deepEqual(d.gecmis, [{ hatalar: [2, 0], kazanan: 1 }]);
+  assert.equal(d.oyuncular[0].puan, 0);
+  assert.equal(d.oyuncular[1].puan, 1);
+  assert.equal(d.yollar[0].length, 10);
+  assert.equal(d.yollar[1].length, 10);
+  assert.equal(d.bulma[0].yanlislar.length, 2);
+  assert.equal(herkesBitti(d), true);
+});
+
+test('tur sonu: bitiş sırası kazananı etkilemez', () => {
+  let d = bulmada();
+  d = hatasizBul(d, 1); // rakip önce bitirir
+  d = hataYap(d, 0, 1);
+  d = hatasizBul(d, 0);
+  assert.equal(d.gecmis[0].kazanan, 1);
+  let e = bulmada();
+  e = hataYap(e, 1, 1);
+  e = hatasizBul(e, 0); // 0 önce, hatasız
+  e = hatasizBul(e, 1);
+  assert.equal(e.gecmis[0].kazanan, 0);
 });
 
 test('tur sonu: eşit hata berabere, kimse puan almaz', () => {
@@ -681,181 +580,165 @@ test('tur sonu: eşit hata berabere, kimse puan almaz', () => {
   d = hatasizBul(d, 0);
   d = hatasizBul(d, 1);
   assert.equal(d.asama, 'acik');
-  assert.equal(d.gecmis[0].kazanan, -1);
+  assert.deepEqual(d.gecmis, [{ hatalar: [1, 1], kazanan: -1 }]);
   assert.equal(d.oyuncular[0].puan, 0);
   assert.equal(d.oyuncular[1].puan, 0);
+  // İkisi de hatasız
+  let e = bulmada();
+  e = hatasizBul(e, 0);
+  e = hatasizBul(e, 1);
+  assert.equal(e.gecmis[0].kazanan, -1);
 });
 
-test('tur sonu: bitiş sırası kazananı etkilemez', () => {
+test('sonraki tur: herhangi biri basar, yeni yollar seçilir, işaretler ve Bak hakkı sıfırlanır', () => {
   let d = bulmada();
-  d = hataYap(d, 0, 3);
-  d = hatasizBul(d, 0); // ilk bitiren ama çok hatalı
+  d = basarili(bak(d, 0));
+  d = hataYap(d, 1, 1);
+  d = hatasizBul(d, 0);
   d = hatasizBul(d, 1);
-  assert.equal(d.gecmis[0].kazanan, 1);
-  assert.equal(d.oyuncular[1].puan, 1);
-});
-
-test('sonraki tur: herhangi biri basabilir, yeni yollar çizilir, işaretler silinir', () => {
-  let d = bulmada({ turSayisi: 3 });
-  d = hatasizBul(hataYap(d, 1, 1), 0);
-  d = hatasizBul(d, 1);
-  assert.equal(d.asama, 'acik');
-  // Ev sahibi olmayan oyuncu da basabilir
   d = basarili(u(d, { tip: 'sonraki', id: pid(1), tur: 0 }));
   assert.equal(d.asama, 'kurma');
   assert.equal(d.tur, 1);
   assert.deepEqual(d.yollar, [null, null]);
   assert.deepEqual(d.hazir, [false, false]);
-  assert.equal(d.bulma[1].hata, 0);
-  assert.equal(d.bulma[1].yanlislar.length, 0);
-  // Puan ve geçmiş korunur
-  assert.equal(d.oyuncular[0].puan, 1);
-  assert.equal(d.gecmis.length, 1);
-  // İkinci basış (eski tur numarasıyla) zararsız
-  const ikinci = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 0 }));
-  assert.equal(ikinci.tur, 1);
-  assert.equal(ikinci.asama, 'kurma');
+  assert.equal(d.bulma[0].bakti, false);
+  assert.deepEqual(d.bulma[1].yanlislar, []);
+  assert.equal(d.oyuncular[0].puan, 1); // puan kalır
+  // İkinci basış zararsız
+  const ayni = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 0 }));
+  assert.equal(ayni.tur, 1);
 });
 
 test('sonraki tur: tur açık değilken hata verir', () => {
-  const d = baslat();
-  assert.match(hatali(u(d, { tip: 'sonraki', id: pid(0), tur: 0 })), /geçilmez/);
-  assert.match(hatali(u(d, { tip: 'sonraki', id: 'yok', tur: 0 })), /odada değilsin/);
+  assert.match(hatali(u(bulmada(), { tip: 'sonraki', id: pid(0), tur: 0 })), /geçilmez/);
+  assert.match(hatali(u(baslat(), { tip: 'sonraki', id: pid(0), tur: 0 })), /geçilmez/);
+  assert.match(hatali(u(bulmada(), { tip: 'sonraki', id: 'yok', tur: 0 })), /odada değilsin/);
 });
 
-// Kurma aşamasındaki oyunu bulma ve açığa kadar götürür
-function turuOyna(d, hata0, hata1) {
-  let simdi = hazirOl(hazirOl(d, 0, YOL_A), 1, YOL_B);
-  simdi = hataYap(simdi, 0, hata0);
-  simdi = hataYap(simdi, 1, hata1);
-  simdi = hatasizBul(simdi, 0);
-  simdi = hatasizBul(simdi, 1);
-  assert.equal(simdi.asama, 'acik');
-  return simdi;
+// n turluk oyunu oynatır: kazananlarListesi[t] = tur t'yi kim alsın (0, 1 ya da -1)
+function oyunuOynat(ayar, kazananlarListesi) {
+  let d = lobi(ayar);
+  d = basarili(u(d, { tip: 'baslat', id: pid(0) }));
+  const n = satirSayisiOku(d);
+  for (let t = 0; t < kazananlarListesi.length; t++) {
+    d = hazirOl(d, 0, yolYap(n, t));
+    d = hazirOl(d, 1, yolYap(n, t + 3));
+    const k = kazananlarListesi[t];
+    if (k === 0) {
+      d = hataYap(d, 1, 1);
+    } else if (k === 1) {
+      d = hataYap(d, 0, 1);
+    }
+    d = hatasizBul(d, 0);
+    d = hatasizBul(d, 1);
+    d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: d.tur }));
+  }
+  return d;
 }
 
 test('oyun sonu: 1 turluk oyun biter, kazanan en çok tur alandır', () => {
-  let d = baslat({ turSayisi: 1 });
-  d = turuOyna(d, 0, 4);
-  d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 0 }));
+  const d = oyunuOynat({ turSayisi: 1 }, [0]);
   assert.equal(d.asama, 'bitti');
+  assert.deepEqual(kazananlar(d), [0]);
   assert.deepEqual(oyunKazananlari(d), [0]);
 });
 
 test('oyun sonu: 3 turluk tam oyun, puanlar ve geçmiş doğru', () => {
-  let d = baslat({ turSayisi: 3 });
-  d = turuOyna(d, 0, 2); // oyuncu 0 alır
-  d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 0 }));
-  assert.equal(d.tur, 1);
-  d = turuOyna(d, 3, 1); // oyuncu 1 alır
-  d = basarili(u(d, { tip: 'sonraki', id: pid(1), tur: 1 }));
-  d = turuOyna(d, 0, 5); // oyuncu 0 alır
-  assert.equal(d.asama, 'acik');
-  assert.equal(d.tur, 2);
-  d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 2 }));
+  const d = oyunuOynat({ turSayisi: 3 }, [0, 1, 1]);
   assert.equal(d.asama, 'bitti');
-  assert.equal(d.oyuncular[0].puan, 2);
-  assert.equal(d.oyuncular[1].puan, 1);
-  assert.deepEqual(oyunKazananlari(d), [0]);
   assert.equal(d.gecmis.length, 3);
   assert.deepEqual(
-    d.gecmis.map((g) => g.hatalar),
-    [
-      [0, 2],
-      [3, 1],
-      [0, 5],
-    ]
+    d.oyuncular.map((o) => o.puan),
+    [1, 2]
   );
-  // Bitti aşamasında ikinci "sonraki" zararsız
-  const yine = basarili(u(d, { tip: 'sonraki', id: pid(1), tur: 2 }));
-  assert.equal(yine.asama, 'bitti');
+  assert.deepEqual(kazananlar(d), [1]);
 });
 
-test('oyun sonu: eşit tur sayısı berabere', () => {
-  let d = baslat({ turSayisi: 3 });
-  d = turuOyna(d, 0, 1); // oyuncu 0
-  d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 0 }));
-  d = turuOyna(d, 2, 0); // oyuncu 1
-  d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 1 }));
-  d = turuOyna(d, 1, 1); // berabere
-  d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 2 }));
+test('oyun sonu: eşit tur sayısı berabere, oyun bitmeden kazanan yok', () => {
+  const d = oyunuOynat({ turSayisi: 3 }, [0, 1, -1]);
+  assert.deepEqual(kazananlar(d), [0, 1]);
+  assert.deepEqual(kazananlar(bulmada()), []);
+});
+
+test('oyun sonu: 5 turluk oyun 8 satırla da biter', () => {
+  const d = oyunuOynat({ turSayisi: 5, satirSayisi: 8 }, [0, 0, 1, 0, 1]);
   assert.equal(d.asama, 'bitti');
-  assert.equal(d.oyuncular[0].puan, 1);
-  assert.equal(d.oyuncular[1].puan, 1);
-  assert.deepEqual(oyunKazananlari(d), [0, 1]);
+  assert.deepEqual(kazananlar(d), [0]);
 });
 
 test('tekrar oyna: yalnız ev sahibi, bitince; puanlar sıfırlanır, kurma başlar', () => {
-  let d = baslat({ turSayisi: 1 });
-  assert.match(hatali(u(d, { tip: 'tekrarOyna', id: pid(0) })), /bitmedi/);
-  d = turuOyna(d, 0, 3);
-  d = basarili(u(d, { tip: 'sonraki', id: pid(0), tur: 0 }));
+  const d = oyunuOynat({ turSayisi: 1 }, [0]);
   assert.match(hatali(u(d, { tip: 'tekrarOyna', id: pid(1) })), /ev sahibi/);
-  d = basarili(u(d, { tip: 'tekrarOyna', id: pid(0) }));
-  assert.equal(d.asama, 'kurma');
-  assert.equal(d.tur, 0);
-  assert.equal(d.oyuncular[0].puan, 0);
-  assert.deepEqual(d.gecmis, []);
-  assert.deepEqual(d.yollar, [null, null]);
-  assert.equal(d.bulma[0].yanlislar.length, 0);
+  const yeni = basarili(u(d, { tip: 'tekrarOyna', id: pid(0) }));
+  assert.equal(yeni.asama, 'kurma');
+  assert.equal(yeni.tur, 0);
+  assert.deepEqual(yeni.gecmis, []);
+  assert.deepEqual(
+    yeni.oyuncular.map((o) => o.puan),
+    [0, 0]
+  );
+  assert.match(hatali(u(bulmada(), { tip: 'tekrarOyna', id: pid(0) })), /bitmedi/);
 });
 
 test('lobiye dön: ev sahibi her aşamada, ayarlar kalır', () => {
-  let d = bulmada({ turSayisi: 5, enAzKare: 12 });
+  let d = bulmada({ satirSayisi: 8, bakmaSuresi: 15, turSayisi: 5 });
   assert.match(hatali(u(d, { tip: 'yeniOyun', id: pid(1) })), /ev sahibi/);
   d = basarili(u(d, { tip: 'yeniOyun', id: pid(0) }));
   assert.equal(d.asama, 'lobi');
-  assert.equal(d.ayar.turSayisi, 5);
-  assert.equal(d.ayar.enAzKare, 12);
+  assert.deepEqual(d.ayar, { turSayisi: 5, satirSayisi: 8, bakmaSuresi: 15 });
   assert.deepEqual(d.yollar, []);
-  assert.equal(d.oyuncular[0].puan, 0);
+  assert.deepEqual(d.bulma, []);
   assert.match(hatali(u(d, { tip: 'yeniOyun', id: pid(0) })), /lobidesin/);
-  // Tekrar başlatılabilir
-  d = basarili(u(d, { tip: 'baslat', id: pid(0) }));
-  assert.equal(d.asama, 'kurma');
 });
 
 // ---------------------------------------------------------------------------
-// Pes etme
+// Pes
 // ---------------------------------------------------------------------------
 
 test('pes: 25 hataya ulaşmadan edilmez, ulaşınca edilir ve tur 25 hata sayılır', () => {
-  let d = bulmada({ turSayisi: 3 });
+  let d = bulmada();
+  assert.match(hatali(u(d, { tip: 'pes', id: pid(0), tur: 0 })), /25 hataya/);
+  assert.equal(oyuncuDurumu(d, 0).pesEdebilir, false);
   d = hataSayisiniKur(d, 0, 24);
   assert.equal(oyuncuDurumu(d, 0).pesEdebilir, false);
-  assert.match(hatali(u(d, { tip: 'pes', id: pid(0), tur: 0 })), /25 hataya/);
-  d = hataYap(d, 0, 1); // gerçek bir yanlış kare: 25. hata
-  assert.equal(oyuncuDurumu(d, 0).hata, PES_HATASI);
+  d = hataSayisiniKur(d, 0, PES_HATASI);
   assert.equal(oyuncuDurumu(d, 0).pesEdebilir, true);
   d = basarili(u(d, { tip: 'pes', id: pid(0), tur: 0 }));
-  const o = oyuncuDurumu(d, 0);
-  assert.equal(o.pes, true);
-  assert.equal(o.bitti, true);
-  assert.equal(o.hata, 25);
-  assert.equal(o.pesEdebilir, false);
-  // Rakibi bekler: tur henüz açılmadı
-  assert.equal(d.asama, 'bulma');
+  assert.equal(oyuncuDurumu(d, 0).bitti, true);
+  assert.equal(oyuncuDurumu(d, 0).pes, true);
+  assert.equal(oyuncuDurumu(d, 0).hata, 25);
   d = hatasizBul(d, 1);
   assert.equal(d.asama, 'acik');
   assert.deepEqual(d.gecmis[0], { hatalar: [25, 0], kazanan: 1 });
 });
 
-test('pes: pes eden oyuncu artık kare seçemez, ikinci pes reddedilir', () => {
-  let d = bulmada();
-  d = hataSayisiniKur(d, 0, 25);
+test('pes: pes eden oyuncu artık kutu seçemez, ikinci pes reddedilir', () => {
+  let d = hataSayisiniKur(bulmada(), 0, 30);
   d = basarili(u(d, { tip: 'pes', id: pid(0), tur: 0 }));
-  assert.match(hatali(kare(d, 0, 5, 5)), /bitirdin/);
+  assert.equal(oyuncuDurumu(d, 0).hata, 25); // 30 değil, 25
   assert.match(hatali(u(d, { tip: 'pes', id: pid(0), tur: 0 })), /bitirdin/);
+  assert.match(hatali(kare(d, 0, 9, 0)), /bitirdin/);
 });
 
 test('pes: iki oyuncu da pes ederse berabere', () => {
   let d = bulmada();
   d = hataSayisiniKur(d, 0, 25);
-  d = hataSayisiniKur(d, 1, 27);
+  d = hataSayisiniKur(d, 1, 25);
   d = basarili(u(d, { tip: 'pes', id: pid(0), tur: 0 }));
   d = basarili(u(d, { tip: 'pes', id: pid(1), tur: 0 }));
   assert.equal(d.asama, 'acik');
   assert.equal(d.gecmis[0].kazanan, -1);
+});
+
+test('gerçek 25 hata: beş satırda beşer yanlışla pes edilebilir hâle gelinir', () => {
+  let d = bulmada();
+  for (let k = 0; k < 5; k++) {
+    d = hataYap(d, 0, 5);
+    const dogru = sonrakiDogruKare(d, 0);
+    d = dokun(d, 0, dogru[0], dogru[1]);
+  }
+  assert.equal(oyuncuDurumu(d, 0).hata, 25);
+  assert.equal(oyuncuDurumu(d, 0).pesEdebilir, true);
 });
 
 // ---------------------------------------------------------------------------
@@ -864,29 +747,152 @@ test('pes: iki oyuncu da pes ederse berabere', () => {
 
 test('girdi durumu hiç değişmez (donmuş durumla çalışır)', () => {
   const d = dondur(bulmada());
-  assert.equal(kare(d, 0, 5, 0).ok, true);
-  assert.equal(kare(d, 0, 5, 5).ok, true);
-  assert.equal(u(d, { tip: 'pes', id: pid(0), tur: 0 }).ok, false);
-  const k = dondur(baslat());
-  assert.equal(u(k, { tip: 'hazir', id: pid(0), tur: 0, yol: YOL_A }).ok, true);
+  const hedef = sonrakiDogruKare(d, 0);
+  const s1 = u(d, { tip: 'kare', id: pid(0), tur: 0, satir: hedef[0], sutun: hedef[1] });
+  assert.equal(s1.ok, true);
+  const s2 = bak(d, 1);
+  assert.equal(s2.ok, true);
+  assert.equal(d.bulma[0].bulunan, 0);
+  assert.equal(d.bulma[1].bakti, false);
 });
 
 test('bilinmeyen hareket hata verir', () => {
-  assert.match(hatali(u(lobi(), { tip: 'uc', id: pid(0) })), /Bilinmeyen/);
-  assert.match(hatali(u(lobi(), undefined)), /Bilinmeyen/);
+  assert.match(hatali(u(bulmada(), { tip: 'uc' })), /Bilinmeyen/);
+  assert.match(hatali(u(bulmada(), null)), /Bilinmeyen/);
 });
 
 test('lobiKur: verilen oyuncularla boş lobi', () => {
   const d = lobiKur(
     [
-      { id: 'a', ad: 'Ali' },
-      { id: 'b', ad: 'Ayşe' },
+      { id: 'a', ad: 'Ali', puan: 7 },
+      { id: 'b', ad: 'Bora' },
     ],
-    'a'
+    'b'
   );
   assert.equal(d.oyun, 'gizliyol');
+  assert.equal(d.asama, 'lobi');
+  assert.equal(d.sahip, 'b');
+  assert.deepEqual(
+    d.oyuncular.map((o) => [o.id, o.ad, o.puan]),
+    [
+      ['a', 'Ali', 0],
+      ['b', 'Bora', 0],
+    ]
+  );
+  assert.deepEqual(d.ayar, { turSayisi: 3, satirSayisi: 10, bakmaSuresi: 5 });
+});
+
+// ---------------------------------------------------------------------------
+// Eski odalarla uyum
+// ---------------------------------------------------------------------------
+
+// Eski biçimde (komşu kareli yol, enAzKare ayarı) bir oda
+function eskiOda(asama) {
+  const d = {
+    oyun: 'gizliyol',
+    asama: asama,
+    sahip: pid(0),
+    ayar: { turSayisi: 5, enAzKare: 12 },
+    oyuncular: [
+      { id: pid(0), ad: 'Ali', puan: 1 },
+      { id: pid(1), ad: 'Bora', puan: 0 },
+    ],
+    tur: 1,
+    yollar: [],
+    hazir: [],
+    bulma: [],
+    gecmis: [{ hatalar: [0, 2], kazanan: 0 }],
+  };
+  if (asama !== 'lobi') {
+    d.yollar = [
+      [
+        [5, 0],
+        [4, 0],
+      ],
+      [
+        [5, 1],
+        [4, 1],
+      ],
+    ];
+    d.hazir = [true, true];
+    d.bulma = [
+      { bulunan: 1, hata: 2, yanlislar: [{ satir: 5, sutun: 3, adim: 0 }], bitti: false, pes: false },
+      { bulunan: 0, hata: 0, yanlislar: [], bitti: false, pes: false },
+    ];
+  }
+  return d;
+}
+
+test('eski oda: eski durum tanınır, okuma yardımcıları çökmez', () => {
+  const eski = eskiOda('bulma');
+  assert.equal(eskiDurumMu(eski), true);
+  assert.equal(satirSayisiOku(eski), 10);
+  assert.doesNotThrow(() => oyuncuDurumu(eski, 0));
+  assert.equal(eskiDurumMu(yeniOda('a', 'Ali')), false);
+});
+
+test('eski oda: lobi sessizce yeni kurallara geçer, eski ayar silinir, tur sayısı kalır', () => {
+  const eski = eskiOda('lobi');
+  const d = basarili(u(eski, { tip: 'ayarla', id: pid(0), ayar: { bakmaSuresi: 10 } }));
+  assert.equal(eskiDurumMu(d), false);
+  assert.deepEqual(d.ayar, { turSayisi: 5, satirSayisi: 10, bakmaSuresi: 10 });
+  assert.equal(d.ayar.enAzKare, undefined);
+  assert.equal(d.tur, 0);
+  assert.deepEqual(d.gecmis, []);
+  // Eski lobiden doğrudan başlatma da çalışır
+  const b = basarili(u(eskiOda('lobi'), { tip: 'baslat', id: pid(0) }));
+  assert.equal(b.asama, 'kurma');
+  assert.equal(b.ayar.satirSayisi, 10);
+  assert.equal(b.ayar.bakmaSuresi, 5);
+  assert.equal(b.ayar.turSayisi, 5);
+});
+
+test('eski oda: oyun ortasında hareketler hata mesajı verir, çökmez', () => {
+  for (const asama of ['kurma', 'bulma', 'acik', 'bitti']) {
+    const eski = eskiOda(asama);
+    for (const eylem of [
+      { tip: 'hazir', id: pid(0), tur: 1, yol: yolYap(10, 0) },
+      { tip: 'kare', id: pid(0), tur: 1, satir: 5, sutun: 0 },
+      { tip: 'bak', id: pid(0), tur: 1, zaman: 1 },
+      { tip: 'pes', id: pid(0), tur: 1 },
+      { tip: 'sonraki', id: pid(0), tur: 1 },
+      { tip: 'tekrarOyna', id: pid(0) },
+      { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 1 } },
+    ]) {
+      assert.match(hatali(u(eski, eylem)), /eski kurallarla/, asama + ' ' + eylem.tip);
+    }
+  }
+});
+
+test('eski oda: oyun ortasında ev sahibi lobiye dönebilir, yeni kurallarla', () => {
+  for (const asama of ['kurma', 'bulma', 'acik', 'bitti']) {
+    const eski = eskiOda(asama);
+    assert.match(hatali(u(eski, { tip: 'yeniOyun', id: pid(1) })), /ev sahibi/);
+    const d = basarili(u(eski, { tip: 'yeniOyun', id: pid(0) }));
+    assert.equal(d.asama, 'lobi');
+    assert.equal(eskiDurumMu(d), false);
+    assert.deepEqual(d.ayar, { turSayisi: 5, satirSayisi: 10, bakmaSuresi: 5 });
+    assert.deepEqual(
+      d.oyuncular.map((o) => o.puan),
+      [0, 0]
+    );
+    // Lobiden sonra yeni oyun başlar
+    const b = basarili(u(d, { tip: 'baslat', id: pid(0) }));
+    assert.equal(b.asama, 'kurma');
+  }
+});
+
+test('eski oda: oyun ortasında katılma isteği (odaya dönen oyuncu) hata vermez', () => {
+  const eski = eskiOda('bulma');
+  const d = basarili(u(eski, { tip: 'katil', id: pid(1), ad: 'Bora' }));
   assert.equal(d.oyuncular.length, 2);
-  assert.equal(d.oyuncular[1].puan, 0);
+});
+
+test('eski oda: yönlendirici üzerinden de çökmez', () => {
+  const eski = eskiOda('bulma');
+  assert.match(hatali(yonlendir(eski, { tip: 'kare', id: pid(0), tur: 1, satir: 5, sutun: 0 })), /eski kurallarla/);
+  const d = basarili(yonlendir(eskiOda('lobi'), { tip: 'baslat', id: pid(0) }));
+  assert.equal(d.asama, 'kurma');
 });
 
 // ---------------------------------------------------------------------------
@@ -914,19 +920,22 @@ test('yönlendirici: oyun listesi Gizli Yol içerir, oda kurulabilir', () => {
   const d = yonlendirYeniOda(pid(0), 'Ali', 'gizliyol');
   assert.equal(d.oyun, 'gizliyol');
   assert.equal(oyunId(d), 'gizliyol');
-  assert.equal(d.asama, 'lobi');
+  assert.equal(d.ayar.satirSayisi, 10);
+  assert.equal(d.ayar.bakmaSuresi, 5);
 });
 
-test('yönlendirici: hareketler Gizli Yol motoruna gider', () => {
+test('yönlendirici: hareketler Gizli Yol motoruna gider (ayarla, hazır, bak, kare)', () => {
   let d = yonlendirLobi('gizliyol', 2);
-  d = basarili(yonlendir(d, { tip: 'ayarla', id: pid(0), ayar: { turSayisi: 1 } }));
-  assert.equal(d.ayar.turSayisi, 1);
+  d = basarili(yonlendir(d, { tip: 'ayarla', id: pid(0), ayar: { satirSayisi: 8, bakmaSuresi: 3 } }));
   d = basarili(yonlendir(d, { tip: 'baslat', id: pid(0) }));
   assert.equal(d.asama, 'kurma');
-  d = basarili(yonlendir(d, { tip: 'hazir', id: pid(0), tur: 0, yol: YOL_A }));
-  d = basarili(yonlendir(d, { tip: 'hazir', id: pid(1), tur: 0, yol: YOL_B }));
+  d = basarili(yonlendir(d, { tip: 'hazir', id: pid(0), tur: 0, yol: yolYap(8, 0) }));
+  d = basarili(yonlendir(d, { tip: 'hazir', id: pid(1), tur: 0, yol: yolYap(8, 3) }));
   assert.equal(d.asama, 'bulma');
-  d = basarili(yonlendir(d, { tip: 'kare', id: pid(0), tur: 0, satir: 5, sutun: 5 }));
+  d = basarili(yonlendir(d, { tip: 'bak', id: pid(0), tur: 0, zaman: 99 }));
+  assert.equal(d.bulma[0].bakti, true);
+  const hedef = sonrakiDogruKare(d, 0);
+  d = basarili(yonlendir(d, { tip: 'kare', id: pid(0), tur: 0, satir: hedef[0], sutun: hedef[1] }));
   assert.equal(d.bulma[0].bulunan, 1);
 });
 
@@ -939,6 +948,7 @@ test('yönlendirici: diğer oyunlardan Gizli Yol seçilir, oyuncular korunur', (
     assert.deepEqual(kimlikler(d), once);
     assert.equal(d.sahip, pid(0));
     assert.equal(d.asama, 'lobi');
+    assert.equal(eskiDurumMu(d), false);
   }
 });
 

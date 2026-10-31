@@ -69,7 +69,7 @@ export const OYUNLAR = [
     ad: 'Gizli Yol',
     enAz: 2,
     enCok: 2,
-    aciklama: 'Rakibinin gizli yolunu bul.',
+    aciklama: 'Rakibinin gizli yolunu hatırla ve bul.',
     simge: '🧭',
     renk: '#6fb7ff',
     temaRengi: '#0a1428',

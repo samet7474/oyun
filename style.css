@@ -2684,7 +2684,7 @@ button {
 }
 
 .gy-mesaj {
-  min-height: 44px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2702,7 +2702,7 @@ button {
   background: rgba(255, 107, 107, 0.16);
 }
 
-/* Tahta: harita ızgarası. Kareler ekrana sığacak kadar küçülür (320px'te yaklaşık 42px) */
+/* Tahta: 6 sütun, 8-10 satır. Soldaki sütun satır numarası (alttan sayılır). Satır yüksekliği --gy-yuk ile gelir. */
 .gy-tahta-kutu {
   width: 100%;
   max-width: 420px;
@@ -2712,34 +2712,35 @@ button {
   gap: 6px;
 }
 
-.gy-uc {
-  font-size: 12px;
+.gy-tahta {
+  display: grid;
+  grid-template-columns: 20px repeat(6, minmax(0, 1fr)); /* dar ekranda taşmasın: kutular küçülür */
+  gap: 3px;
+  padding: 6px;
+  border-radius: 16px;
+  background: #0d1d3b;
+  border: 2px solid #26426f;
+}
+
+.gy-satir-no {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  text-align: center;
   color: var(--yazi-soluk);
 }
 
-.gy-tahta {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr)); /* dar ekranda (320px) taşmasın: kareler küçülür */
-  gap: 4px;
-  padding: 6px;
-  border-radius: 16px;
-  background:
-    linear-gradient(rgba(111, 183, 255, 0.06) 1px, transparent 1px) 0 0 / 100% 16.66%,
-    linear-gradient(90deg, rgba(111, 183, 255, 0.06) 1px, transparent 1px) 0 0 / 16.66% 100%,
-    #0d1d3b;
-  border: 2px solid #26426f;
+.gy-satir-no.sira {
+  color: var(--vurgu);
 }
 
 .gy-kare {
   position: relative;
-  aspect-ratio: 1;
   min-width: 0;
-  min-height: 40px;
+  height: var(--gy-yuk, 40px);
   padding: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   border: 2px solid #2b4a7a;
   background: #14284a;
   color: var(--yazi);
@@ -2760,29 +2761,47 @@ button {
   transform: scale(0.94);
 }
 
-.gy-kare.ust {
-  border-color: #3c5f96;
-}
-
-.gy-kare.alt {
-  border-color: #3c5f96;
-}
-
-.gy-kare.olabilir {
+/* Çözme: sıradaki satır belirgin, bulunan satırın diğer kutuları sönük */
+.gy-kare.sira-satir {
   border-color: var(--vurgu);
-  border-style: dashed;
+  background: #1c3a6c;
 }
 
-/* Kurma: çizdiğim yol */
+.gy-kare.gec {
+  opacity: 0.4;
+}
+
+/* Kurma: seçtiğim kutu */
+.gy-kare.secili {
+  background: #4d8ff0;
+  border-color: #cfe5ff;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(140, 194, 255, 0.45);
+}
+
+/* Bak süresi: rakibin yolu görünür */
+.gy-kare.goster {
+  background: #e0a526;
+  border-color: #ffe29a;
+  color: #2a1c00;
+  box-shadow: 0 0 12px rgba(255, 210, 100, 0.6);
+}
+
+/* Sonuç tahtası: yol kutusu mavi */
 .gy-kare.yol {
   background: #2d6cc4;
   border-color: #8cc2ff;
   color: #fff;
 }
 
-.gy-kare.yol.son {
-  background: #4d8ff0;
-  box-shadow: 0 0 0 3px rgba(140, 194, 255, 0.5);
+.gy-tahta.acik {
+  --gy-yuk: 26px !important;
+  gap: 2px;
+}
+
+.gy-tahta.acik .gy-kare {
+  font-size: 12px;
+  border-radius: 6px;
 }
 
 /* Bulma: doğru kare yeşil parlar */
@@ -2842,15 +2861,6 @@ button {
   60% {
     transform: translateX(7px);
   }
-}
-
-/* Sonuç tahtası: yolun üstünde yanlış basılan kare */
-.gy-kare.yol.hatali {
-  box-shadow: inset 0 0 0 3px #ff6b6b;
-}
-
-.gy-tahta.acik .gy-kare.yol {
-  background: #2d6cc4;
 }
 
 .gy-alt {
@@ -4433,4 +4443,52 @@ button {
 
 .gy-yol-sayac.iyi {
   color: var(--iyi);
+}
+
+/* Gizli Yol: Bak paneli (düğme, geri sayım, kısa bilgi) */
+.gy-bak {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.gy-bak-dugme {
+  flex: none;
+  min-height: 52px;
+  padding: 0 22px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.gy-bak-yazi {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+}
+
+.gy-bak.sayiyor {
+  background: rgba(224, 165, 38, 0.18);
+  border: 2px solid #e0a526;
+}
+
+.gy-sayim-sn {
+  flex: none;
+  min-width: 48px;
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  color: #ffd27a;
+}
+
+.gy-bak.bitti {
+  justify-content: center;
+  padding: 6px 12px;
+}
+
+.gy-sayfa {
+  gap: 8px;
 }
