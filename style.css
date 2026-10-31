@@ -1,4 +1,4 @@
-/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun" ve "Kelime düellosu"). Önce telefon (360-430px), büyük ekranda ortalanır. */
+/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun", "Kelime düellosu" ve "Aynı Kafa"). Önce telefon (360-430px), büyük ekranda ortalanır. */
 
 :root {
   --bg: #0c2f26;
@@ -49,6 +49,19 @@
   --k-gri: #3a3f42;
   --k-bos-kenar: #4b5a5e;
   --k-dolu-kenar: #8a9a9d;
+}
+
+/* "Aynı Kafa" odasında sıcak, koyu mercan masa */
+:root[data-tema='aynikafa'] {
+  --bg: #3a1812;
+  --bg-ust: #7d3220;
+  --panel: rgba(0, 0, 0, 0.26);
+  --panel-acik: rgba(255, 255, 255, 0.1);
+  --yazi: #fff4ee;
+  --yazi-soluk: #ebbfae;
+  --vurgu: #ff9a6c;
+  --iyi: #8ee3a3;
+  --kotu: #ff8a8a;
 }
 
 * {
@@ -1161,6 +1174,11 @@ button {
   order: 3;
 }
 
+.secenekler.oyun-secici .secenek[data-oyun='aynikafa'] {
+  flex: 1 1 100%;
+  order: 4;
+}
+
 .cipler {
   display: flex;
   flex-wrap: wrap;
@@ -2049,6 +2067,325 @@ button {
 .kelime-ozet .deneme.kazanan {
   background: var(--k-yesil);
   color: #fff;
+}
+
+/* ------------------------------------------------------------------ */
+/* Aynı Kafa                                                           */
+/* ------------------------------------------------------------------ */
+
+.ak-sayfa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 16px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.ak-ust {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 800;
+}
+
+.ak-puan {
+  color: var(--vurgu);
+}
+
+.ak-ipucu {
+  padding: 22px 16px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, #ff9a6c, #e0583a);
+  color: #3a1208;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.ak-ipucu.kucuk {
+  padding: 12px 14px;
+  font-size: 19px;
+}
+
+.ak-yazim {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ak-girdi {
+  text-align: center;
+  font-weight: 800;
+  font-size: 22px;
+}
+
+.ak-hata {
+  text-align: center;
+  min-height: 1.2em;
+}
+
+.ak-alt-yazi {
+  text-align: center;
+}
+
+.ak-durumlar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ak-durum {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  font-weight: 700;
+}
+
+.ak-durum .ad {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ak-durum .ne {
+  flex: none;
+  color: var(--yazi-soluk);
+  font-size: 14px;
+}
+
+.ak-durum.gonderdi .ne {
+  color: var(--iyi);
+}
+
+.ak-nasil {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 15px;
+}
+
+.ak-nasil summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ak-nasil ul {
+  margin: 6px 0 2px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--yazi-soluk);
+}
+
+/* Cevap kartları */
+.ak-kartlar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ak-kartlar.n2 {
+  grid-template-columns: 1fr;
+}
+
+.ak-kart {
+  --gr: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 12px 14px;
+  border-radius: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.14);
+  background: var(--panel);
+  text-align: center;
+}
+
+.ak-kart .ad {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ak-kart .cevap {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.ak-kart.eslesti {
+  border-color: var(--gr);
+  background: color-mix(in srgb, var(--gr) 22%, rgba(0, 0, 0, 0.2));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--gr) 55%, transparent);
+}
+
+/* Kartlar sırayla açılır, eşleşenler biraz sonra parlar */
+.ak-kart.ac {
+  animation: ak-ac 0.45s ease-out both;
+  animation-delay: calc(var(--sira) * 0.12s);
+}
+
+.ak-kart.parla {
+  animation: ak-ac 0.45s ease-out both, ak-parla 1.1s ease-in-out 0.9s 2;
+  animation-delay: calc(var(--sira) * 0.12s), 0.9s;
+}
+
+.ak-kart.eslesti:not(.ac).parla {
+  animation: ak-parla 1.1s ease-in-out 2;
+}
+
+@keyframes ak-ac {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92) rotateX(40deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ak-parla {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--gr) 55%, transparent);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 34px var(--gr);
+  }
+}
+
+.ak-tur-puani {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--yazi-soluk);
+}
+
+.ak-tur-puani.iyi {
+  color: var(--vurgu);
+}
+
+.ak-cift-listesi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ak-cift {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--panel-acik);
+  overflow-wrap: anywhere;
+}
+
+.ak-cift.eslesti {
+  background: rgba(142, 227, 163, 0.16);
+  font-weight: 700;
+}
+
+.ak-cift .yazi {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.ak-cift .mini-dugme {
+  flex: none;
+  min-height: 40px;
+}
+
+.ak-oy-bolumu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ak-alt {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 28%);
+}
+
+/* Oyun sonu */
+.ak-guzel-listesi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ak-guzel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-acik);
+  overflow-wrap: anywhere;
+}
+
+.ak-guzel-ust {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ak-guzel .soru {
+  font-weight: 800;
+}
+
+.ak-guzel .artis {
+  flex: none;
+  color: var(--iyi);
+  font-weight: 900;
+}
+
+.ak-guzel-cevap {
+  font-size: 15px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ak-kart.ac,
+  .ak-kart.parla {
+    animation: none;
+  }
 }
 
 /* ------------------------------------------------------------------ */

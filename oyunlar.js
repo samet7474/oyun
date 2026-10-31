@@ -7,11 +7,13 @@
 import * as uno from './uno.js';
 import * as tanis from './tanis.js';
 import * as kelime from './kelime.js';
+import * as aynikafa from './aynikafa.js';
 
 export const OYUNLAR = [
   { id: 'uno', ad: 'UNO' },
   { id: 'tanis', ad: 'Beni ne kadar tanıyorsun' },
   { id: 'kelime', ad: 'Kelime düellosu' },
+  { id: 'aynikafa', ad: 'Aynı Kafa' },
 ];
 
 export function oyunBilinir(id) {
@@ -34,6 +36,9 @@ export function yeniOda(sahipId, sahipAd, oyun = 'uno') {
   if (oyun === 'kelime') {
     return kelime.yeniOda(sahipId, sahipAd);
   }
+  if (oyun === 'aynikafa') {
+    return aynikafa.yeniOda(sahipId, sahipAd);
+  }
   return uno.yeniOda(sahipId, sahipAd);
 }
 
@@ -45,6 +50,9 @@ function lobiyiDegistir(durum, oyun) {
   }
   if (oyun === 'kelime') {
     return kelime.lobiKur(oyuncular, durum.sahip);
+  }
+  if (oyun === 'aynikafa') {
+    return aynikafa.lobiKur(oyuncular, durum.sahip);
   }
   const ilk = oyuncular[0];
   let yeni = uno.yeniOda(ilk.id, ilk.ad);
@@ -85,7 +93,15 @@ function oyunSec(durum, eylem) {
 // Tek giriş noktası. Girdi durumu değişmez.
 // banka: yalnız "Beni ne kadar tanıyorsun" için soru bankası (testler küçük bir banka verir).
 // kelimeListesi: yalnız "Kelime düellosu" için { cevaplar, gecerli } (testler küçük bir liste verir).
-export function uygula(durum, eylem, rastgele = Math.random, banka = undefined, kelimeListesi = undefined) {
+// ipuclari: yalnız "Aynı Kafa" için ipucu dizisi (testler küçük bir liste verir).
+export function uygula(
+  durum,
+  eylem,
+  rastgele = Math.random,
+  banka = undefined,
+  kelimeListesi = undefined,
+  ipuclari = undefined
+) {
   if (eylem && eylem.tip === 'oyunSec') {
     return oyunSec(durum, eylem);
   }
@@ -95,6 +111,9 @@ export function uygula(durum, eylem, rastgele = Math.random, banka = undefined, 
   }
   if (oyun === 'kelime') {
     return kelime.uygula(durum, eylem, rastgele, kelimeListesi);
+  }
+  if (oyun === 'aynikafa') {
+    return aynikafa.uygula(durum, eylem, rastgele, ipuclari);
   }
   if (oyun === 'uno') {
     return uno.uygula(durum, eylem, rastgele);

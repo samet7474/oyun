@@ -1,12 +1,13 @@
 // app.js - Ekranlar, çizim ve Supabase senkronu.
-// Oyun kuralları uno.js, tanis.js ve kelime.js içindedir, hareketler oyunlar.js üzerinden geçer;
+// Oyun kuralları uno.js, tanis.js, kelime.js ve aynikafa.js içindedir, hareketler oyunlar.js üzerinden geçer;
 // burada sadece göstermek ve eşitlemek var. "Beni ne kadar tanıyorsun" ekranları tanis-ekran.js'te,
-// "Kelime düellosu" ekranları kelime-ekran.js'te.
+// "Kelime düellosu" ekranları kelime-ekran.js'te, "Aynı Kafa" ekranları aynikafa-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { uygula, oyunId, oyunBilinir, OYUNLAR } from './oyunlar.js';
 import { tanisEkraniKur } from './tanis-ekran.js';
 import { kelimeEkraniKur } from './kelime-ekran.js';
+import { aynikafaEkraniKur } from './aynikafa-ekran.js';
 import {
   yeniOda,
   atilabilirlik,
@@ -108,6 +109,17 @@ const tanisEkran = tanisEkraniKur({
 
 // "Kelime düellosu" ekranları
 const kelimeEkran = kelimeEkraniKur({
+  el: el,
+  istemci: istemci,
+  hamle: hamle,
+  mesajGoster: mesajGoster,
+  render: render,
+  benimIndeks: benimIndeks,
+  ustCubuk: ustCubuk,
+});
+
+// "Aynı Kafa" ekranları
+const aynikafaEkran = aynikafaEkraniKur({
   el: el,
   istemci: istemci,
   hamle: hamle,
@@ -337,6 +349,7 @@ function odaBaglan(kod, satir) {
   istemci.sonAtikId = null;
   tanisEkran.sifirla();
   kelimeEkran.sifirla();
+  aynikafaEkran.sifirla();
   try {
     history.replaceState(null, '', '#' + kod);
   } catch (hata) {
@@ -482,6 +495,7 @@ async function odadanCik() {
   document.title = BASLIK;
   tanisEkran.sifirla();
   kelimeEkran.sifirla();
+  aynikafaEkran.sifirla();
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch (hata) {
@@ -533,6 +547,9 @@ function benimSiramMi(d) {
   }
   if (d.oyun === 'kelime') {
     return false; // sıra yok, herkes aynı anda oynar
+  }
+  if (d.oyun === 'aynikafa') {
+    return d.asama === 'soru' && d.cevaplar[d.tur][idx] === null; // cevabımı bekliyorlar
   }
   return d.asama === 'oyun' && d.sira === idx;
 }
@@ -874,7 +891,7 @@ function ustCubuk() {
           {
             class: 'link-dugme',
             onclick: () => {
-              if (d.asama === 'bitti' && (d.oyun === 'tanis' || d.oyun === 'kelime')) {
+              if (d.asama === 'bitti' && (d.oyun === 'tanis' || d.oyun === 'kelime' || d.oyun === 'aynikafa')) {
                 hamle({ tip: 'yeniOyun' });
               } else if (window.confirm('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?')) {
                 hamle({ tip: 'yeniOyun' });
@@ -1029,6 +1046,9 @@ function oyunBolumu(d, sahipMi) {
   }
   if (oyun === 'kelime') {
     return kelimeEkran.lobiBolumu(d, sahipMi);
+  }
+  if (oyun === 'aynikafa') {
+    return aynikafaEkran.lobiBolumu(d, sahipMi);
   }
   return unoLobiBolumu(d, sahipMi);
 }
@@ -1415,17 +1435,19 @@ function elSonuKatmani(d, ben) {
 // Çizim
 // ---------------------------------------------------------------------------
 
-// Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül, "Kelime düellosu" koyu ardıç
+// Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül, "Kelime düellosu" koyu ardıç,
+// "Aynı Kafa" sıcak mercan
 const TEMA_RENKLERI = {
   uno: '#0c2f26',
   tanis: '#241437',
   kelime: '#0f1c22',
+  aynikafa: '#3a1812',
 };
 
 function temaUygula(d) {
   const oyun = istemci.kod && d ? oyunId(d) : 'uno';
   const sayfaKoku = document.documentElement;
-  if (oyun === 'tanis' || oyun === 'kelime') {
+  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa') {
     sayfaKoku.setAttribute('data-tema', oyun);
   } else {
     sayfaKoku.removeAttribute('data-tema');
@@ -1443,6 +1465,12 @@ function render() {
   // Kendi sorumu yazarken gelen güncelleme yazı kutusunu bozmasın
   if (istemci.kod && ben >= 0 && tanisEkran.yazimSurerken(d)) {
     tanisEkran.ozelEsitle();
+    return;
+  }
+
+  // "Aynı Kafa"da cevap yazarken gelen güncelleme yazı kutusunu bozmasın
+  if (istemci.kod && ben >= 0 && aynikafaEkran.yazimSurerken(d)) {
+    aynikafaEkran.esitle(d, ben);
     return;
   }
 
@@ -1486,6 +1514,11 @@ function render() {
 
   if (oyunId(d) === 'kelime') {
     kok.append(...kelimeEkran.sayfa(d, ben));
+    return;
+  }
+
+  if (oyunId(d) === 'aynikafa') {
+    kok.append(...aynikafaEkran.sayfa(d, ben));
     return;
   }
 

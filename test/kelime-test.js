@@ -879,7 +879,7 @@ function kimlikler(d) {
 test('yönlendirici: oyun listesi üç oyun içerir, kelime odası kurulabilir', () => {
   assert.deepEqual(
     OYUNLAR.map((o) => o.id),
-    ['uno', 'tanis', 'kelime']
+    ['uno', 'tanis', 'kelime', 'aynikafa']
   );
   assert.equal(OYUNLAR.find((o) => o.id === 'kelime').ad, 'Kelime düellosu');
   const d = yonlendirYeniOda('a', 'Ali', 'kelime');
