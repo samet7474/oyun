@@ -91,6 +91,16 @@ export function tanisEkraniKur(k) {
     });
   }
 
+  // Kullanıcı bir düğmeye bastığında ekranı hemen yeniler. Yazı kutusu odakta kalmışsa (telefonlarda
+  // düğmeye basmak kutunun odağını almayabilir) önce odağı bırakır; yoksa çizim "yazıyor" sanılıp atlanırdı.
+  function hemenCiz() {
+    const aktif = document.activeElement;
+    if (aktif && aktif.tagName === 'INPUT' && aktif.closest('#app')) {
+      aktif.blur();
+    }
+    k.render();
+  }
+
   function sorularimAc() {
     durumum.sorularimAcik = true;
     taslagiSifirla();
@@ -99,7 +109,7 @@ export function tanisEkraniKur(k) {
 
   function sorularimKapat() {
     durumum.sorularimAcik = false;
-    k.render();
+    hemenCiz();
   }
 
   function yeniKendiId(liste) {
@@ -115,33 +125,33 @@ export function tanisEkraniKur(k) {
     const liste = sorularimOku();
     if (liste.length >= MAKS_OZEL) {
       t.hata = 'En fazla ' + MAKS_OZEL + ' soru ekleyebilirsin.';
-      k.render();
+      hemenCiz();
       return;
     }
     const hata = ozelSoruHatasi(t.soru, t.secenekler);
     if (hata) {
       t.hata = hata;
-      k.render();
+      hemenCiz();
       return;
     }
     const temiz = ozelTemizle([{ id: yeniKendiId(liste), soru: t.soru, secenekler: t.secenekler }]);
     if (temiz.length === 0) {
       t.hata = 'Soru eklenemedi.';
-      k.render();
+      hemenCiz();
       return;
     }
     liste.push(temiz[0]);
     sorularimYaz(liste);
     taslagiSifirla();
     k.mesajGoster('Soru eklendi.');
-    k.render();
+    hemenCiz();
   }
 
   function soruSil(id) {
     onayIste('Bu soru silinsin mi?', { tamam: 'Sil', iptal: 'Vazgeç', tehlikeli: true }).then((evet) => {
       if (evet) {
         sorularimYaz(sorularimOku().filter((q) => q.id !== id));
-        k.render();
+        hemenCiz();
       }
     });
   }
@@ -153,7 +163,7 @@ export function tanisEkraniKur(k) {
     }
     t.secenekler.push('');
     t.hata = '';
-    k.render();
+    hemenCiz();
     odakla(t.secenekler.length - 1);
   }
 
@@ -164,7 +174,7 @@ export function tanisEkraniKur(k) {
     }
     t.secenekler.splice(i, 1);
     t.hata = '';
-    k.render();
+    hemenCiz();
   }
 
   function odakla(i) {
