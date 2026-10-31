@@ -150,6 +150,17 @@ export function aynikafaEkraniKur(k) {
     );
   }
 
+  // Uyarıyı hemen yaz. Kutuda odak varken (iOS'ta düğmeye basınca da kalır) render() çizimi
+  // atladığı için uyarı yazısını doğrudan yerine yazarız.
+  function hataGoster(metin) {
+    durumum.hata = metin;
+    const uyari = document.querySelector('.ak-hata');
+    if (uyari) {
+      uyari.textContent = metin;
+    }
+    k.render();
+  }
+
   function gonder(d, ben, girdi) {
     if (durumum.gonderiliyor) {
       return;
@@ -157,8 +168,7 @@ export function aynikafaEkraniKur(k) {
     const metin = girdi.value;
     const hata = cevapHatasi(metin);
     if (hata) {
-      durumum.hata = hata;
-      k.render();
+      hataGoster(hata);
       return;
     }
     durumum.hata = '';
@@ -171,8 +181,7 @@ export function aynikafaEkraniKur(k) {
         if (sonuc.hata === 'mesgul') {
           k.mesajGoster('Bir saniye, tekrar dene.');
         } else {
-          durumum.hata = sonuc.hata;
-          k.render();
+          hataGoster(sonuc.hata);
         }
       }
     });

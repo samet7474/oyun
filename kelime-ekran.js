@@ -146,6 +146,10 @@ export function kelimeEkraniKur(k) {
     if (aktif && (aktif.tagName === 'INPUT' || aktif.tagName === 'TEXTAREA' || aktif.isContentEditable)) {
       return;
     }
+    // Onay penceresi açıkken tuşlar pencereye aittir (Enter, "Evet" düğmesine basmalı)
+    if (document.querySelector('.onay-katmani')) {
+      return;
+    }
     if (!oynayabilirMi()) {
       return;
     }
