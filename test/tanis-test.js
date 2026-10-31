@@ -850,7 +850,7 @@ function kimlikler(d) {
 test('yönlendirici: oyun listesi ve yeni oda varsayılanı UNO', () => {
   assert.deepEqual(
     OYUNLAR.map((o) => o.id),
-    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev']
+    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element']
   );
   assert.equal(yonlendirYeniOda('a', 'Ali').oyun, 'uno');
   assert.equal(yonlendirYeniOda('a', 'Ali', 'tanis').oyun, 'tanis');

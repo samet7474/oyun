@@ -1,13 +1,13 @@
 # Oyun Masası
 
-Arkadaşlar kendi telefonundan aynı linki açıp altı oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol** ve **Gizli Görev**.
+Arkadaşlar kendi telefonundan aynı linki açıp yedi oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol**, **Gizli Görev** ve **Element Düellosu**.
 Sunucu kodu yok: her hamle tarayıcıda hesaplanır ve Supabase tablosuna (`oyun_odalari`) yazılır.
 GitHub Pages'te çalışır, derleme gerekmez.
 
 ## Nasıl oynanır
 1. Adını yaz, **Oda kur**'a bas. Oda UNO olarak açılır.
 2. Çıkan linki ya da 4 harfli kodu arkadaşına gönder. O da adını yazıp **Katıl**'a basar.
-3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol** ya da **Gizli Görev**), ayarları yapar ve **Oyunu başlat**'a basar.
+3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol**, **Gizli Görev** ya da **Element Düellosu**), ayarları yapar ve **Oyunu başlat**'a basar.
    Oyun yalnız lobide değişir; oyun bitince **Lobiye dön** ile lobiye inilir.
 
 ### UNO
@@ -90,6 +90,27 @@ Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6x6 karedir. Herkes gizli 
 - Görev bankası `gorev-gorevler.js` içindedir (124 görev: 40 kolay, 42 orta, 42 zor).
 - Bilinen sınır: görevler oda satırında durur (durum herkese açıktır); ekran başkasının görevini göstermez. Süre her telefonun saatine göre sayılır.
 
+### Element Düellosu
+Tam iki kişi, aynı anda kapalı seçim yapılan kart oyunu. Üç element var: **Ateş**, **Su**, **Toprak**.
+Su ateşi söndürür, ateş toprağı (otları) yakar, toprak suyu emer.
+- **Deste:** her oyuncunun kendi destesi var: her elementten 1-5 değerli birer kart (15 kart) + 3 özel kart = 18 kart. Başta herkes 5 kart çeker.
+- **Özel kartlar:** **Ters Rüzgâr** o tur yenme döngüsünü tersine çevirir (ateş suyu yener vb.); kendisi elementsizdir, bir element kartıyla birlikte oynanır
+  (iki kart birlikte). İki oyuncu da Ters Rüzgâr oynarsa etkisi kalmaz. **Kalkan** tek başına oynanır: o tur kimse puan almaz, iki kart da atılır.
+  **İkiye Katla** bir element kartıyla birlikte oynanır; o kart kazanırsa puan iki katı olur (kaybederse bir etkisi yok).
+  Bir turda en fazla bir özel kart oynanır. Ters Rüzgâr ya da İkiye Katla tek başına oynanamaz.
+- **Tur:** iki oyuncu aynı anda gizlice seçer, **Oyna**'ya basınca seçim kilitlenir (geri alınmaz). Rakip yalnız "seçti" görür.
+  İkisi de kilitleyince kartlar animasyonla açılır.
+- **Kazanan:** elementler farklıysa döngüye göre yenen element kazanır. Aynı elementte büyük sayı kazanır, sayılar da eşitse berabere (puan yok).
+  Kazanan, **kendi kartının sayısı + rakip kartın sayısı** kadar puan alır (İkiye Katla ile iki katı). Berabere ve Kalkan turunda puan yok.
+- Tur sonunda herkes elini 5'e tamamlar (deste bittiyse tamamlamaz). Oynanan kartlar atılır ve iki oyuncunun açılan kartları
+  **Oynananlar** şeridinde birikir (kart sayma için). Herhangi biri **Sonraki tur**'a basabilir.
+- **Oyun sonu:** biri hedef puana ulaşınca (ayar: 20 / 30 / 40) ya da iki oyuncunun da oynayabileceği kart kalmayınca.
+  Kartlar biterse çok puanlı kazanır, eşitse berabere. Oynanabilir kart: bir element kartı ya da Kalkan; elinde yalnız
+  Ters Rüzgâr / İkiye Katla kalan oyuncu o tur otomatik "oynayacak kartı yok" sayılır (o turda puan çıkmaz).
+- Ekranda küçük bir "Kim kimi yener?" döngü şeması ve "Nasıl oynanır" kutusu vardır. Kartlar CSS ve inline SVG ile çizilir.
+- Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Element Düellosu seçilemez.
+- Bilinen sınır: eller ve kilitli seçimler oda satırında durur (durum herkese açıktır); ekran rakibin elini ve kilitli seçimini açılıştan önce çizmez.
+
 Aynı tarayıcıdan aynı linke dönersen koltuğuna otursun diye kimliğin tarayıcıda saklanır.
 
 ## Testleri çalıştırma
@@ -100,6 +121,7 @@ node test/kelime-test.js
 node test/aynikafa-test.js
 node test/gizliyol-test.js
 node test/gorev-test.js
+node test/element-test.js
 ```
 `tanis-test.js` "Beni ne kadar tanıyorsun" motorunu ve oyun yönlendiriciyi (`oyunlar.js`) sınar.
 `kelime-test.js` "Kelime düellosu" motorunu (renklendirme, Türkçe harfler, tur akışı, çakışma) ve yönlendiriciyi sınar;
@@ -107,23 +129,26 @@ kendi küçük kelime listesini kullanır.
 `aynikafa-test.js` "Aynı Kafa" motorunu (Türkçe karşılaştırma, puanlama, aynı sayılsın oyu, uyum, ipucu tekrarı) ve yönlendiriciyi sınar.
 `gizliyol-test.js` "Gizli Yol" motorunu (yol kuralları, doğru ve yanlış adım, başa dönme, kalıcı işaret, pes, tur ve oyun sonu, beraberlik) ve yönlendiriciyi sınar.
 `gorev-test.js` "Gizli Görev" motorunu (dağıtım, onay ve çoğunluk, yakalama, değiştirme hakkı, hedef puan ve süre bitişi, gizlilik yardımcıları) ve yönlendiriciyi sınar.
+`element-test.js` "Element Düellosu" motorunu (deste, dağıtım, yenme döngüsü, özel kartlar ve kombinasyonları, geçersiz seçimler, el tamamlama, hedef puan ve eller boşalınca bitiş, gizlilik yardımcısı) ve yönlendiriciyi sınar.
 Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
 - `index.html`: sayfa iskeleti, Supabase betiği
-- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın temayla açılır
+- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın, "Element Düellosu" mürdüm-indigo temayla açılır
 - `app.js`: ekranlar, UNO masası, Supabase senkronu
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
 - `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
 - `aynikafa-ekran.js`: "Aynı Kafa" ekranları (lobi ayarları, ipucu ve cevap, açılış kartları, oylar, sonuç)
 - `gizliyol-ekran.js`: "Gizli Yol" ekranları (lobi ayarları, yol çizme, bulma tahtası, rakip ilerlemesi, açık yollar, sonuç)
 - `gorev-ekran.js`: "Gizli Görev" ekranları (lobi ayarları, görev kartları, onay ve yakalama soruları, puan tablosu, geri sayım, sonuç)
+- `element-ekran.js`: "Element Düellosu" ekranları (lobi ayarları, kartlar, masa ve açılış animasyonu, el şeridi, oynananlar şeridi, döngü şeması, sonuç)
 - `oyunlar.js`: oyun yönlendirici; hareketi `durum.oyun`'a göre doğru motora verir, oyun seçimini (`oyunSec`) yapar
 - `uno.js`: UNO kuralları (saf motor, DOM ve ağ yok)
 - `gizliyol.js`: Gizli Yol kuralları (saf motor, DOM ve ağ yok)
 - `tanis.js`: "Beni ne kadar tanıyorsun" kuralları (saf motor, DOM ve ağ yok)
 - `gorev.js`: Gizli Görev kuralları (saf motor, DOM ve ağ yok)
 - `gorev-gorevler.js`: Gizli Görev görev bankası
+- `element.js`: Element Düellosu kuralları (saf motor, DOM ve ağ yok)
 - `kelime.js`: "Kelime düellosu" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa.js`: "Aynı Kafa" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa-ipuclari.js`: "Aynı Kafa" ipucu bankası
@@ -136,8 +161,9 @@ Hata varsa çıkış kodu 1 olur.
 - `test/aynikafa-test.js`: Aynı Kafa motoru ve yönlendirici testleri
 - `test/gizliyol-test.js`: Gizli Yol motoru ve yönlendirici testleri
 - `test/gorev-test.js`: Gizli Görev motoru ve yönlendirici testleri
+- `test/element-test.js`: Element Düellosu motoru ve yönlendirici testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar
-Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa), rakibin yolu (Gizli Yol) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
+Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa), rakibin yolu (Gizli Yol), rakibin eli ve kilitli seçimi (Element Düellosu) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
 Satırın `oyun` sütunu hep `uno` kalır; gerçek oyun `durum.oyun` içindedir (böylece eski odalar ve veritabanı değişmeden çalışır).

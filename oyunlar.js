@@ -10,6 +10,7 @@ import * as kelime from './kelime.js';
 import * as aynikafa from './aynikafa.js';
 import * as gizliyol from './gizliyol.js';
 import * as gorev from './gorev.js';
+import * as element from './element.js';
 
 export const OYUNLAR = [
   { id: 'uno', ad: 'UNO' },
@@ -18,6 +19,7 @@ export const OYUNLAR = [
   { id: 'aynikafa', ad: 'Aynı Kafa' },
   { id: 'gizliyol', ad: 'Gizli Yol' },
   { id: 'gorev', ad: 'Gizli Görev' },
+  { id: 'element', ad: 'Element Düellosu' },
 ];
 
 export function oyunBilinir(id) {
@@ -49,6 +51,9 @@ export function yeniOda(sahipId, sahipAd, oyun = 'uno') {
   if (oyun === 'gorev') {
     return gorev.yeniOda(sahipId, sahipAd);
   }
+  if (oyun === 'element') {
+    return element.yeniOda(sahipId, sahipAd);
+  }
   return uno.yeniOda(sahipId, sahipAd);
 }
 
@@ -69,6 +74,9 @@ function lobiyiDegistir(durum, oyun) {
   }
   if (oyun === 'gorev') {
     return gorev.lobiKur(oyuncular, durum.sahip);
+  }
+  if (oyun === 'element') {
+    return element.lobiKur(oyuncular, durum.sahip);
   }
   const ilk = oyuncular[0];
   let yeni = uno.yeniOda(ilk.id, ilk.ad);
@@ -101,6 +109,9 @@ function oyunSec(durum, eylem) {
   }
   if (eylem.oyun === 'gizliyol' && durum.oyuncular.length > gizliyol.OYUNCU_SAYISI) {
     return { ok: false, hata: 'Gizli Yol 2 kişiliktir. Önce fazla kişileri çıkar.' };
+  }
+  if (eylem.oyun === 'element' && durum.oyuncular.length > element.OYUNCU_SAYISI) {
+    return { ok: false, hata: 'Element Düellosu 2 kişiliktir. Önce fazla kişileri çıkar.' };
   }
   const yeni = lobiyiDegistir(durum, eylem.oyun);
   if (!yeni) {
@@ -142,6 +153,9 @@ export function uygula(
   }
   if (oyun === 'gorev') {
     return gorev.uygula(durum, eylem, rastgele, gorevler, simdi);
+  }
+  if (oyun === 'element') {
+    return element.uygula(durum, eylem, rastgele);
   }
   if (oyun === 'uno') {
     return uno.uygula(durum, eylem, rastgele);
