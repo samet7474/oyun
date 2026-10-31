@@ -1,4 +1,4 @@
-/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun", "Kelime düellosu" ve "Aynı Kafa"). Önce telefon (360-430px), büyük ekranda ortalanır. */
+/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun", "Kelime düellosu", "Aynı Kafa" ve "Gizli Yol"). Önce telefon (360-430px), büyük ekranda ortalanır. */
 
 :root {
   --bg: #0c2f26;
@@ -62,6 +62,19 @@
   --vurgu: #ff9a6c;
   --iyi: #8ee3a3;
   --kotu: #ff8a8a;
+}
+
+/* "Gizli Yol" odasında gece mavisi, harita gibi masa */
+:root[data-tema='gizliyol'] {
+  --bg: #0a1428;
+  --bg-ust: #17305a;
+  --panel: rgba(0, 0, 0, 0.3);
+  --panel-acik: rgba(140, 190, 255, 0.1);
+  --yazi: #eaf2ff;
+  --yazi-soluk: #9db6d8;
+  --vurgu: #6fb7ff;
+  --iyi: #46e08a;
+  --kotu: #ff6b6b;
 }
 
 * {
@@ -1177,6 +1190,11 @@ button {
 .secenekler.oyun-secici .secenek[data-oyun='aynikafa'] {
   flex: 1 1 100%;
   order: 4;
+}
+
+.secenekler.oyun-secici .secenek[data-oyun='gizliyol'] {
+  flex: 1 1 100%;
+  order: 5;
 }
 
 .cipler {
@@ -2441,4 +2459,376 @@ button {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Gizli Yol                                                           */
+/* ------------------------------------------------------------------ */
+
+.gy-sayfa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 16px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.gy-ust {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 800;
+}
+
+.gy-mesaj {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--yazi-soluk);
+}
+
+.gy-mesaj.kotu {
+  color: #ffd0d0;
+  background: rgba(255, 107, 107, 0.16);
+}
+
+/* Tahta: harita ızgarası. Kareler en az 44px, ekrana sığar */
+.gy-tahta-kutu {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gy-uc {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--yazi-soluk);
+}
+
+.gy-tahta {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(44px, 1fr));
+  gap: 4px;
+  padding: 6px;
+  border-radius: 16px;
+  background:
+    linear-gradient(rgba(111, 183, 255, 0.06) 1px, transparent 1px) 0 0 / 100% 16.66%,
+    linear-gradient(90deg, rgba(111, 183, 255, 0.06) 1px, transparent 1px) 0 0 / 16.66% 100%,
+    #0d1d3b;
+  border: 2px solid #26426f;
+}
+
+.gy-kare {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 10px;
+  border: 2px solid #2b4a7a;
+  background: #14284a;
+  color: var(--yazi);
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+
+.gy-kare:disabled {
+  cursor: default;
+  opacity: 1;
+  color: var(--yazi);
+}
+
+.gy-kare:not(:disabled):active {
+  transform: scale(0.94);
+}
+
+.gy-kare.ust {
+  border-color: #3c5f96;
+}
+
+.gy-kare.alt {
+  border-color: #3c5f96;
+}
+
+.gy-kare.olabilir {
+  border-color: var(--vurgu);
+  border-style: dashed;
+}
+
+/* Kurma: çizdiğim yol */
+.gy-kare.yol {
+  background: #2d6cc4;
+  border-color: #8cc2ff;
+  color: #fff;
+}
+
+.gy-kare.yol.son {
+  background: #4d8ff0;
+  box-shadow: 0 0 0 3px rgba(140, 194, 255, 0.5);
+}
+
+/* Bulma: doğru kare yeşil parlar */
+.gy-kare.dogru {
+  background: #1f9d58;
+  border-color: #7dffb4;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(70, 224, 138, 0.6);
+}
+
+.gy-kare.dogru.parla {
+  animation: gy-parla 0.9s ease-out;
+}
+
+@keyframes gy-parla {
+  0% {
+    transform: scale(0.8);
+    box-shadow: 0 0 0 0 rgba(125, 255, 180, 0.9);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 22px 6px rgba(125, 255, 180, 0.8);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(70, 224, 138, 0.6);
+  }
+}
+
+/* Yanlış kare kırmızı çarpı, kalıcı */
+.gy-kare.yanlis {
+  background: #4a1d2a;
+  border-color: #ff6b6b;
+  color: #ff8d8d;
+  font-size: 22px;
+}
+
+.gy-kare.yanlis.sallan {
+  animation: gy-salla 0.5s ease;
+}
+
+@keyframes gy-salla {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-7px);
+  }
+  40%,
+  60% {
+    transform: translateX(7px);
+  }
+}
+
+/* Sonuç tahtası: yolun üstünde yanlış basılan kare */
+.gy-kare.yol.hatali {
+  box-shadow: inset 0 0 0 3px #ff6b6b;
+}
+
+.gy-tahta.acik .gy-kare.yol {
+  background: #2d6cc4;
+}
+
+.gy-alt {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 28%);
+}
+
+.gy-dugmeler {
+  display: flex;
+  gap: 10px;
+}
+
+.gy-dugmeler .dugme {
+  flex: 1;
+}
+
+.gy-durum {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--yazi-soluk);
+}
+
+.gy-durum.iyi {
+  color: var(--iyi);
+}
+
+.gy-sayac {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  font-weight: 800;
+}
+
+.gy-sayac .kotu {
+  color: var(--kotu);
+}
+
+/* Rakibin ilerlemesi */
+.gy-rakip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.gy-rakip .baslik-satiri {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gy-rakip .ad {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.gy-rakip .puan-rozeti {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--panel-acik);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+}
+
+.gy-rakip .durum {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+}
+
+.gy-rakip.cozdu .durum {
+  color: var(--iyi);
+}
+
+/* Nasıl oynanır */
+.gy-nasil {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 15px;
+}
+
+.gy-nasil summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.gy-nasil ul {
+  margin: 6px 0 2px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--yazi-soluk);
+}
+
+/* Sonuç */
+.gy-kazanan {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.gy-yol-kutusu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--panel);
+}
+
+.gy-yol-kutusu h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.gy-yol-kutusu .soluk-yazi {
+  margin: 0;
+  font-size: 14px;
+}
+
+.gy-ozet-listesi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gy-ozet {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--panel-acik);
+}
+
+.gy-ozet .tur {
+  font-weight: 900;
+}
+
+.gy-ozet .hatalar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.gy-ozet .hata {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.gy-ozet .hata.kazanan {
+  background: #1f9d58;
+  color: #fff;
 }

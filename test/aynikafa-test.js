@@ -622,7 +622,7 @@ function kimlikler(d) {
 test('yönlendirici: oyun listesi Aynı Kafa içerir, oda kurulabilir', () => {
   assert.deepEqual(
     OYUNLAR.map((o) => o.id),
-    ['uno', 'tanis', 'kelime', 'aynikafa']
+    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol']
   );
   assert.equal(OYUNLAR.find((o) => o.id === 'aynikafa').ad, 'Aynı Kafa');
   const d = yonlendirYeniOda(pid(0), 'Ali', 'aynikafa');

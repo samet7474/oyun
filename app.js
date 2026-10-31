@@ -1,13 +1,15 @@
 // app.js - Ekranlar, çizim ve Supabase senkronu.
-// Oyun kuralları uno.js, tanis.js, kelime.js ve aynikafa.js içindedir, hareketler oyunlar.js üzerinden geçer;
+// Oyun kuralları uno.js, tanis.js, kelime.js, aynikafa.js ve gizliyol.js içindedir, hareketler oyunlar.js üzerinden geçer;
 // burada sadece göstermek ve eşitlemek var. "Beni ne kadar tanıyorsun" ekranları tanis-ekran.js'te,
-// "Kelime düellosu" ekranları kelime-ekran.js'te, "Aynı Kafa" ekranları aynikafa-ekran.js'te.
+// "Kelime düellosu" ekranları kelime-ekran.js'te, "Aynı Kafa" ekranları aynikafa-ekran.js'te,
+// "Gizli Yol" ekranları gizliyol-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { uygula, oyunId, oyunBilinir, OYUNLAR } from './oyunlar.js';
 import { tanisEkraniKur } from './tanis-ekran.js';
 import { kelimeEkraniKur } from './kelime-ekran.js';
 import { aynikafaEkraniKur } from './aynikafa-ekran.js';
+import { gizliyolEkraniKur } from './gizliyol-ekran.js';
 import {
   yeniOda,
   atilabilirlik,
@@ -120,6 +122,17 @@ const kelimeEkran = kelimeEkraniKur({
 
 // "Aynı Kafa" ekranları
 const aynikafaEkran = aynikafaEkraniKur({
+  el: el,
+  istemci: istemci,
+  hamle: hamle,
+  mesajGoster: mesajGoster,
+  render: render,
+  benimIndeks: benimIndeks,
+  ustCubuk: ustCubuk,
+});
+
+// "Gizli Yol" ekranları
+const gizliyolEkran = gizliyolEkraniKur({
   el: el,
   istemci: istemci,
   hamle: hamle,
@@ -350,6 +363,7 @@ function odaBaglan(kod, satir) {
   tanisEkran.sifirla();
   kelimeEkran.sifirla();
   aynikafaEkran.sifirla();
+  gizliyolEkran.sifirla();
   try {
     history.replaceState(null, '', '#' + kod);
   } catch (hata) {
@@ -496,6 +510,7 @@ async function odadanCik() {
   tanisEkran.sifirla();
   kelimeEkran.sifirla();
   aynikafaEkran.sifirla();
+  gizliyolEkran.sifirla();
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch (hata) {
@@ -550,6 +565,9 @@ function benimSiramMi(d) {
   }
   if (d.oyun === 'aynikafa') {
     return d.asama === 'soru' && d.cevaplar[d.tur][idx] === null; // cevabımı bekliyorlar
+  }
+  if (d.oyun === 'gizliyol') {
+    return false; // sıra yok, herkes aynı anda oynar
   }
   return d.asama === 'oyun' && d.sira === idx;
 }
@@ -891,7 +909,7 @@ function ustCubuk() {
           {
             class: 'link-dugme',
             onclick: () => {
-              if (d.asama === 'bitti' && (d.oyun === 'tanis' || d.oyun === 'kelime' || d.oyun === 'aynikafa')) {
+              if (d.asama === 'bitti' && (d.oyun === 'tanis' || d.oyun === 'kelime' || d.oyun === 'aynikafa' || d.oyun === 'gizliyol')) {
                 hamle({ tip: 'yeniOyun' });
               } else if (window.confirm('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?')) {
                 hamle({ tip: 'yeniOyun' });
@@ -1050,6 +1068,9 @@ function oyunBolumu(d, sahipMi) {
   if (oyun === 'aynikafa') {
     return aynikafaEkran.lobiBolumu(d, sahipMi);
   }
+  if (oyun === 'gizliyol') {
+    return gizliyolEkran.lobiBolumu(d, sahipMi);
+  }
   return unoLobiBolumu(d, sahipMi);
 }
 
@@ -1057,14 +1078,15 @@ function lobiEkrani() {
   const d = istemci.durum;
   const sahipMi = d.sahip === istemci.oyuncuId;
   const tanisMi = oyunId(d) === 'tanis';
+  const gizliyolMu = oyunId(d) === 'gizliyol';
 
   // Kendi sorularımı düzenlediğim ekran
   if (tanisMi && tanisEkran.sorularimAcikMi()) {
     return tanisEkran.sorularimEkrani();
   }
 
-  // Oyuncu satırları (UNO'da 4 koltuk, "Beni ne kadar tanıyorsun"da 2)
-  const koltuk = tanisMi ? Math.max(2, d.oyuncular.length) : MAKS_OYUNCU;
+  // Oyuncu satırları (UNO'da 4 koltuk, "Beni ne kadar tanıyorsun"da 2, "Gizli Yol"da tam 2)
+  const koltuk = gizliyolMu ? 2 : tanisMi ? Math.max(2, d.oyuncular.length) : MAKS_OYUNCU;
   const satirlar = [];
   for (let i = 0; i < koltuk; i++) {
     const o = d.oyuncular[i];
@@ -1106,7 +1128,13 @@ function lobiEkrani() {
     el(
       'div',
       { class: 'kutu' },
-      el('h2', null, tanisMi ? 'Oyuncular (' + d.oyuncular.length + ')' : 'Oyuncular (' + d.oyuncular.length + '/' + MAKS_OYUNCU + ')'),
+      el(
+        'h2',
+        null,
+        tanisMi
+          ? 'Oyuncular (' + d.oyuncular.length + ')'
+          : 'Oyuncular (' + d.oyuncular.length + '/' + (gizliyolMu ? 2 : MAKS_OYUNCU) + ')'
+      ),
       el('ul', { class: 'oyuncu-listesi' }, satirlar)
     ),
     oyunBolumu(d, sahipMi)
@@ -1436,18 +1464,19 @@ function elSonuKatmani(d, ben) {
 // ---------------------------------------------------------------------------
 
 // Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül, "Kelime düellosu" koyu ardıç,
-// "Aynı Kafa" sıcak mercan
+// "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi
 const TEMA_RENKLERI = {
   uno: '#0c2f26',
   tanis: '#241437',
   kelime: '#0f1c22',
   aynikafa: '#3a1812',
+  gizliyol: '#0a1428',
 };
 
 function temaUygula(d) {
   const oyun = istemci.kod && d ? oyunId(d) : 'uno';
   const sayfaKoku = document.documentElement;
-  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa') {
+  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa' || oyun === 'gizliyol') {
     sayfaKoku.setAttribute('data-tema', oyun);
   } else {
     sayfaKoku.removeAttribute('data-tema');
@@ -1519,6 +1548,11 @@ function render() {
 
   if (oyunId(d) === 'aynikafa') {
     kok.append(...aynikafaEkran.sayfa(d, ben));
+    return;
+  }
+
+  if (oyunId(d) === 'gizliyol') {
+    kok.append(...gizliyolEkran.sayfa(d, ben));
     return;
   }
 

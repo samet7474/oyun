@@ -1,13 +1,13 @@
 # Oyun Masası
 
-Arkadaşlar kendi telefonundan aynı linki açıp dört oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu** ve **Aynı Kafa**.
+Arkadaşlar kendi telefonundan aynı linki açıp beş oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu**, **Aynı Kafa** ve **Gizli Yol**.
 Sunucu kodu yok: her hamle tarayıcıda hesaplanır ve Supabase tablosuna (`oyun_odalari`) yazılır.
 GitHub Pages'te çalışır, derleme gerekmez.
 
 ## Nasıl oynanır
 1. Adını yaz, **Oda kur**'a bas. Oda UNO olarak açılır.
 2. Çıkan linki ya da 4 harfli kodu arkadaşına gönder. O da adını yazıp **Katıl**'a basar.
-3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu** ya da **Aynı Kafa**), ayarları yapar ve **Oyunu başlat**'a basar.
+3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu**, **Aynı Kafa** ya da **Gizli Yol**), ayarları yapar ve **Oyunu başlat**'a basar.
    Oyun yalnız lobide değişir; oyun bitince **Lobiye dön** ile lobiye inilir.
 
 ### UNO
@@ -54,6 +54,25 @@ Sonda **Uyum** yüzdesi (doğru tahmin / (2 x soru sayısı)) ve **Bunları konu
 - Ayarlar (ev sahibi): ipucu sayısı 5 / 10 / 15. Odada sorulan ipucu, liste bitene kadar tekrar gelmez.
 - İpucu bankası `aynikafa-ipuclari.js` içindedir (`IPUCLARI`).
 
+### Gizli Yol
+Tam iki kişi, aynı anda oynanır (sıra yok). Tahta 6x6 karedir. Herkes gizli bir yol çizer, sonra birbirinin yolunu bulur.
+- **Kurma:** Yol alt satırdaki bir kareden başlar, üst satırdaki bir karede biter. Her adım bir önceki kareye yan yana ya da alt alta komşudur
+  (çapraz yok), aynı kareden iki kez geçilmez. Yol en az 8 kare olmalı (ayar: **Kısa** 8 kare, **Uzun** 12 kare).
+  Parmakla çizilir: kareye dokundukça yol uzar, son kareye dokununca bir adım geri alınır, **Temizle** hepsini siler.
+  Yol geçerli olunca **Hazırım**'a basılır (rakip hazır olmadan **Yolu değiştir** ile vazgeçilebilir). İkisi de hazır olunca bulma başlar.
+- **Bulma:** Önce alt satırda başlangıç karesi aranır, sonra hep son bulunan kareye komşu bir kareye dokunulur.
+  Doğru kare yeşil yanar. Yanlış kare kalıcı kırmızı çarpı olur, hata sayısı 1 artar ve oyuncu **başa döner**:
+  bulduğu kareler (başlangıç dahil) tekrar gizlenir, yolu baştan yürümesi gerekir. Kırmızı çarpılar kalır, bu yüzden her hata ipucu verir.
+  Başlangıç için alt satırda yanlış kareye basmak da hatadır. Komşu olmayan kareye ya da bulunmuş kareye dokunmak hata sayılmaz, kısa bir uyarı çıkar.
+  Aynı yerde (aynı bulunan kare sayısında) aynı yanlış kareye tekrar basmak da hata sayılmaz, uyarı çıkar.
+- Üst satıra ulaşıp yolun son karesini bulan bitirmiş olur. Rakibin ilerlemesi canlı görünür (kaç kare ilerledi, kaç hata), hangi kareler olduğu görünmez.
+- İkisi de bitirince tur biter: daha az hata yapan turu alır, eşitse berabere (puan yok). Sonuçta iki yol da açılır;
+  her yolun üstünde rakibin o yolda yaptığı hatalar gösterilir. Herhangi biri **Sonraki tur**'a basabilir.
+- Biri 25 hataya ulaşırsa **Pes et** düğmesi çıkar: pes eden o tur 25 hata sayılır ve rakibin bitirmesini bekler.
+- Ayarlar (ev sahibi): tur sayısı 1 / 3 / 5, yolun en az uzunluğu 8 / 12 kare. Sonda kazanan, **Tekrar oyna** ve **Lobiye dön** çıkar.
+- Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Gizli Yol seçilemez.
+- Bilinen sınır: yollar oda satırında durur (durum herkese açıktır); ekran bulma bitene kadar rakibin yolunu çizmez.
+
 Aynı tarayıcıdan aynı linke dönersen koltuğuna otursun diye kimliğin tarayıcıda saklanır.
 
 ## Testleri çalıştırma
@@ -62,22 +81,26 @@ node test/uno-test.js
 node test/tanis-test.js
 node test/kelime-test.js
 node test/aynikafa-test.js
+node test/gizliyol-test.js
 ```
 `tanis-test.js` "Beni ne kadar tanıyorsun" motorunu ve oyun yönlendiriciyi (`oyunlar.js`) sınar.
 `kelime-test.js` "Kelime düellosu" motorunu (renklendirme, Türkçe harfler, tur akışı, çakışma) ve yönlendiriciyi sınar;
 kendi küçük kelime listesini kullanır.
 `aynikafa-test.js` "Aynı Kafa" motorunu (Türkçe karşılaştırma, puanlama, aynı sayılsın oyu, uyum, ipucu tekrarı) ve yönlendiriciyi sınar.
+`gizliyol-test.js` "Gizli Yol" motorunu (yol kuralları, doğru ve yanlış adım, başa dönme, kalıcı işaret, pes, tur ve oyun sonu, beraberlik) ve yönlendiriciyi sınar.
 Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
 - `index.html`: sayfa iskeleti, Supabase betiği
-- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan temayla açılır
+- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi temayla açılır
 - `app.js`: ekranlar, UNO masası, Supabase senkronu
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
 - `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
 - `aynikafa-ekran.js`: "Aynı Kafa" ekranları (lobi ayarları, ipucu ve cevap, açılış kartları, oylar, sonuç)
+- `gizliyol-ekran.js`: "Gizli Yol" ekranları (lobi ayarları, yol çizme, bulma tahtası, rakip ilerlemesi, açık yollar, sonuç)
 - `oyunlar.js`: oyun yönlendirici; hareketi `durum.oyun`'a göre doğru motora verir, oyun seçimini (`oyunSec`) yapar
 - `uno.js`: UNO kuralları (saf motor, DOM ve ağ yok)
+- `gizliyol.js`: Gizli Yol kuralları (saf motor, DOM ve ağ yok)
 - `tanis.js`: "Beni ne kadar tanıyorsun" kuralları (saf motor, DOM ve ağ yok)
 - `kelime.js`: "Kelime düellosu" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa.js`: "Aynı Kafa" kuralları (saf motor, DOM ve ağ yok)
@@ -89,8 +112,9 @@ Hata varsa çıkış kodu 1 olur.
 - `test/tanis-test.js`: tanış motoru ve yönlendirici testleri
 - `test/kelime-test.js`: kelime düellosu motoru ve yönlendirici testleri
 - `test/aynikafa-test.js`: Aynı Kafa motoru ve yönlendirici testleri
+- `test/gizliyol-test.js`: Gizli Yol motoru ve yönlendirici testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar
-Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
+Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa), rakibin yolu (Gizli Yol) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
 Satırın `oyun` sütunu hep `uno` kalır; gerçek oyun `durum.oyun` içindedir (böylece eski odalar ve veritabanı değişmeden çalışır).
