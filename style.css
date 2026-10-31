@@ -1648,8 +1648,7 @@ button {
 }
 
 /* Gönder / Sonraki düğmeleri ekranın altında kalsın */
-.tanis-alt,
-.kelime-alt {
+.tanis-alt {
   position: sticky;
   bottom: 0;
   display: flex;
@@ -1657,6 +1656,14 @@ button {
   gap: 8px;
   padding: 12px 0 max(8px, env(safe-area-inset-bottom));
   background: linear-gradient(to bottom, transparent, var(--bg) 28%);
+}
+
+/* Kelime düellosu: Sonraki düğmesi akışta kalır, tahtanın son satırını örtmez */
+.kelime-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 max(8px, env(safe-area-inset-bottom));
 }
 
 .tanis-durum {
@@ -4479,6 +4486,8 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
+  box-sizing: border-box;
+  min-height: 72px; /* düğme, sayım ve kısa yazı aynı yükseklikte: tahta zıplamaz */
   padding: 8px 12px;
   border-radius: 14px;
   background: var(--panel);
@@ -4515,7 +4524,7 @@ button {
 
 .gy-bak.bitti {
   justify-content: center;
-  padding: 6px 12px;
+  padding: 8px 12px;
 }
 
 .gy-sayfa {

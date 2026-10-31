@@ -121,6 +121,7 @@ const tanisEkran = tanisEkraniKur({
   istemci: istemci,
   hamle: hamle,
   mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
   render: render,
   benimIndeks: benimIndeks,
   ustCubuk: ustCubuk,
@@ -134,6 +135,7 @@ const kelimeEkran = kelimeEkraniKur({
   istemci: istemci,
   hamle: hamle,
   mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
   render: render,
   benimIndeks: benimIndeks,
   ustCubuk: ustCubuk,
@@ -145,6 +147,7 @@ const aynikafaEkran = aynikafaEkraniKur({
   istemci: istemci,
   hamle: hamle,
   mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
   render: render,
   benimIndeks: benimIndeks,
   ustCubuk: ustCubuk,
@@ -156,6 +159,7 @@ const gizliyolEkran = gizliyolEkraniKur({
   istemci: istemci,
   hamle: hamle,
   mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
   render: render,
   benimIndeks: benimIndeks,
   ustCubuk: ustCubuk,
@@ -167,6 +171,7 @@ const gorevEkran = gorevEkraniKur({
   istemci: istemci,
   hamle: hamle,
   mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
   render: render,
   benimIndeks: benimIndeks,
   ustCubuk: ustCubuk,
@@ -178,6 +183,7 @@ const elementEkran = elementEkraniKur({
   istemci: istemci,
   hamle: hamle,
   mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
   render: render,
   benimIndeks: benimIndeks,
   ustCubuk: ustCubuk,
@@ -189,6 +195,7 @@ const kuleEkran = kuleEkraniKur({
   istemci: istemci,
   hamle: hamle,
   mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
   render: render,
   benimIndeks: benimIndeks,
   ustCubuk: ustCubuk,
@@ -246,6 +253,18 @@ function mesajGoster(metin) {
   toastZamanlayici = setTimeout(() => {
     kutu.classList.remove('goster');
   }, 2600);
+}
+
+// Önceki hamle ağdayken gelen dokunuşta sakin bir uyarı. 1,5 sn içinde en fazla bir kez çıkar.
+let sonBekleyenUyari = 0;
+
+function bekleyenUyari() {
+  const simdi = Date.now();
+  if (simdi - sonBekleyenUyari < 1500) {
+    return;
+  }
+  sonBekleyenUyari = simdi;
+  mesajGoster('Bir saniye, tekrar dene.');
 }
 
 function kodTemizle(metin) {
@@ -544,6 +563,9 @@ async function eylemDene(eylem, deneme = 0) {
 // Sonuç: { ok: true } ya da { ok: false, hata }
 async function hamle(eylem) {
   if (istemci.mesgul || !istemci.durum) {
+    if (istemci.mesgul) {
+      bekleyenUyari();
+    }
     return { ok: false, hata: 'mesgul' };
   }
   istemci.mesgul = true;

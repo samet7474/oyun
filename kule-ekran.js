@@ -86,7 +86,7 @@ export function kuleEkraniKur(k) {
   function hamleGonder(eylem) {
     return k.hamle(eylem).then((sonuc) => {
       if (sonuc && !sonuc.ok && sonuc.hata === 'mesgul') {
-        k.mesajGoster('Bir saniye, tekrar dene.');
+        k.bekleyenUyari();
       }
       return sonuc;
     });
@@ -544,7 +544,9 @@ export function kuleEkraniKur(k) {
         ? el(
             'div',
             { class: 'kl-alt' },
-            el('button', { class: 'dugme birincil genis', onclick: () => k.hamle({ tip: 'tekrarOyna' }) }, 'Tekrar oyna'),
+            d.oyuncular.length >= 2
+              ? el('button', { class: 'dugme birincil genis', onclick: () => k.hamle({ tip: 'tekrarOyna' }) }, 'Tekrar oyna')
+              : el('p', { class: 'slogan' }, 'Tekrar oynamak için en az 2 kişi gerekli.'),
             el('button', { class: 'dugme ikincil genis', onclick: () => k.hamle({ tip: 'yeniOyun' }) }, 'Lobiye dön')
           )
         : el('p', { class: 'slogan' }, 'Ev sahibi yeni oyunu başlatacak.')

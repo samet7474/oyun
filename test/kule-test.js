@@ -681,6 +681,19 @@ test('oyuncu ayrılınca: çatlak ve hak dizileri de küçülür', () => {
   assert.equal(d.oyuncular[1].id, pid(2));
 });
 
+test('oyuncu ayrılınca: "Son olanlar" listesine çıktığı yazılır', () => {
+  let d = oyun(3);
+  d = basarili(u(d, { tip: 'cikar', id: pid(1) }));
+  assert.equal(d.haberler[d.haberler.length - 1].metin, 'Oyuncu1 oyundan çıktı.');
+  // ev sahibi çıkarırsa da yazılır; tek kişi kalıp oyun bitse de haber durur
+  d = basarili(u(d, { tip: 'cikar', id: pid(0), hedef: pid(2) }));
+  assert.equal(d.haberler[d.haberler.length - 1].metin, 'Oyuncu2 oyundan çıktı.');
+  // lobide çıkmak haber yazmaz
+  let lobiDurumu = lobi(3);
+  lobiDurumu = basarili(u(lobiDurumu, { tip: 'cikar', id: pid(1) }));
+  assert.equal(lobiDurumu.haberler.length, 0);
+});
+
 // ---------------------------------------------------------------------------
 // Sırayı geç
 // ---------------------------------------------------------------------------

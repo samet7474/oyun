@@ -117,13 +117,18 @@ export function elementEkraniKur(k) {
 
   function hamleGonder(eylem) {
     if (durumum.gonderiliyor) {
+      k.bekleyenUyari();
       return;
     }
     durumum.gonderiliyor = true;
     k.hamle(eylem).then((sonuc) => {
       durumum.gonderiliyor = false;
       if (sonuc && !sonuc.ok) {
-        k.mesajGoster(sonuc.hata === 'mesgul' ? 'Bir saniye, tekrar dene.' : sonuc.hata);
+        if (sonuc.hata === 'mesgul') {
+          k.bekleyenUyari();
+        } else {
+          k.mesajGoster(sonuc.hata);
+        }
         return;
       }
       k.render();
@@ -375,6 +380,8 @@ export function elementEkraniKur(k) {
         sinif += g.kazanan === ben ? ' benim' : ' rakibin';
       } else if (g.neden === 'kalkan') {
         etiket = 'Kalkan';
+      } else if (g.neden === 'rakipYok') {
+        etiket = 'Puan yok';
       }
       const kartSatiri = (i) =>
         el(
@@ -400,7 +407,9 @@ export function elementEkraniKur(k) {
       el('h2', null, 'Oynananlar'),
       turlar.length > 0
         ? el('div', { class: 'ed-gecmis-serit' }, turlar)
-        : el('p', { class: 'soluk-yazi' }, 'Henüz açılmış kart yok. Açılan kartlar burada birikir. Üstte rakibin, altta senin kartların görünür.')
+        : acikTurGizli
+          ? el('p', { class: 'soluk-yazi' }, '\u00a0') // açılış animasyonu sürerken yazı çıkmasın, kutu boş kalsın
+          : el('p', { class: 'soluk-yazi' }, 'Henüz açılmış kart yok. Açılan kartlar burada birikir. Üstte rakibin, altta senin kartların görünür.')
     );
   }
 

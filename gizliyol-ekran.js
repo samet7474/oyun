@@ -101,13 +101,18 @@ export function gizliyolEkraniKur(k) {
 
   function hamleGonder(eylem, sonra) {
     if (durumum.gonderiliyor) {
+      k.bekleyenUyari();
       return;
     }
     durumum.gonderiliyor = true;
     k.hamle(eylem).then((sonuc) => {
       durumum.gonderiliyor = false;
       if (sonuc && !sonuc.ok) {
-        k.mesajGoster(sonuc.hata === 'mesgul' ? 'Bir saniye, tekrar dene.' : sonuc.hata);
+        if (sonuc.hata === 'mesgul') {
+          k.bekleyenUyari();
+        } else {
+          k.mesajGoster(sonuc.hata);
+        }
         return;
       }
       if (sonra) {
@@ -596,7 +601,8 @@ export function gizliyolEkraniKur(k) {
       satirSayisi,
       (s, c) => {
         const h = { etiket: kareEtiketi(satirSayisi, s, c) };
-        const bulunduMu = sirada === null || s > sirada; // bu satır bulundu
+        // Bu satır bulundu mu? Alttan sayılan bulunan satır sayısına bakılır (pes edende hepsi bulunmuş sayılmaz)
+        const bulunduMu = satirSayisi - 1 - s < ilerleme.bulunan;
         if (bulunduMu && hedef[s] === c) {
           h.sinif = 'dogru';
           if (yeniMi(d.tur + ':d:' + s)) {

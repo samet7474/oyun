@@ -69,7 +69,7 @@ export function gorevEkraniKur(k) {
     odagiBirak();
     return k.hamle(eylem).then((sonuc) => {
       if (sonuc && !sonuc.ok && sonuc.hata === 'mesgul') {
-        k.mesajGoster('Bir saniye, tekrar dene.');
+        k.bekleyenUyari();
       }
       return sonuc;
     });
@@ -366,6 +366,7 @@ export function gorevEkraniKur(k) {
 
     function yakalaGonder() {
       if (durumum.gonderiliyor) {
+        k.bekleyenUyari();
         return;
       }
       if (durumum.yakalaHedef === '') {
@@ -556,6 +557,12 @@ export function gorevEkraniKur(k) {
 
   // Tüm sayfa (üst çubuk dahil): oyun ve bitti aşamaları
   function sayfa(d, ben) {
+    // Oyun bitince yakalama paneli kapanır ve boşalır: yeni oyun temiz başlasın
+    if (d.asama === 'bitti') {
+      durumum.yakalaAcik = false;
+      durumum.yakalaHedef = '';
+      durumum.tahmin = '';
+    }
     const govde = d.asama === 'bitti' ? bitisEkrani(d, ben) : oyunEkrani(d, ben);
     return [k.ustCubuk(), govde];
   }

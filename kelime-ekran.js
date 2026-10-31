@@ -114,7 +114,11 @@ export function kelimeEkraniKur(k) {
   // zorla: true ise sözlükte olmayan kelime de gönderilir ("Yine de kullan")
   function gonder(zorla) {
     const o = oynayabilirMi();
-    if (!o || durumum.gonderiliyor) {
+    if (!o) {
+      return;
+    }
+    if (durumum.gonderiliyor) {
+      k.bekleyenUyari();
       return;
     }
     satiriHazirla(o.d, o.ben);
@@ -132,7 +136,7 @@ export function kelimeEkraniKur(k) {
     k.hamle({ tip: 'tahmin', tur: o.d.tur, kelime: kelime, zorla: zorla === true }).then((sonuc) => {
       durumum.gonderiliyor = false;
       if (sonuc && !sonuc.ok && sonuc.hata === 'mesgul') {
-        k.mesajGoster('Bir saniye, tekrar dene.');
+        k.bekleyenUyari();
       }
     });
   }

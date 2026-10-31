@@ -269,6 +269,7 @@ function cikarIsle(d, e, rastgele, simdi) {
     return null;
   }
   const oyundaMi = d.asama === 'oyun';
+  const cikanAd = d.oyuncular[idx].ad;
   d.oyuncular.splice(idx, 1);
   if (d.sahip === hedefId && d.oyuncular.length > 0) {
     d.sahip = d.oyuncular[0].id;
@@ -276,6 +277,9 @@ function cikarIsle(d, e, rastgele, simdi) {
   if (!oyundaMi) {
     return null;
   }
+
+  // Herkes görsün: biri oyundan çıktı
+  olayYaz(d, { tip: 'cikti' }, cikanAd + ' oyundan çıktı.');
 
   // Oyuncuya ait diziler de küçülür
   d.kasalar.splice(idx, 1);

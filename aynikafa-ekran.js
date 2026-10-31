@@ -163,6 +163,7 @@ export function aynikafaEkraniKur(k) {
 
   function gonder(d, ben, girdi) {
     if (durumum.gonderiliyor) {
+      k.bekleyenUyari();
       return;
     }
     const metin = girdi.value;
@@ -179,7 +180,7 @@ export function aynikafaEkraniKur(k) {
       durumum.gonderiliyor = false;
       if (sonuc && !sonuc.ok) {
         if (sonuc.hata === 'mesgul') {
-          k.mesajGoster('Bir saniye, tekrar dene.');
+          k.bekleyenUyari();
         } else {
           hataGoster(sonuc.hata);
         }
@@ -349,7 +350,11 @@ export function aynikafaEkraniKur(k) {
   function oyVer(d, c, sayilsin) {
     k.hamle({ tip: 'sayilsin', tur: d.tur, a: c.a, b: c.b, sayilsin: sayilsin }).then((sonuc) => {
       if (sonuc && !sonuc.ok) {
-        k.mesajGoster(sonuc.hata === 'mesgul' ? 'Bir saniye, tekrar dene.' : sonuc.hata);
+        if (sonuc.hata === 'mesgul') {
+          k.bekleyenUyari();
+        } else {
+          k.mesajGoster(sonuc.hata);
+        }
       }
     });
   }
