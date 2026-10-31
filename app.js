@@ -1752,6 +1752,11 @@ function render() {
     return;
   }
 
+  // "Gizli Yol" lobisinde Bak süresi kaydırıcısı sürüklenirken gelen güncelleme kaydırıcıyı zıplatmasın
+  if (istemci.kod && ben >= 0 && d && d.oyun === 'gizliyol' && d.asama === 'lobi' && gizliyolEkran.kaydiriciSurukleniyor()) {
+    return;
+  }
+
   // El şeridinin kaydırma konumunu koru
   const eskiSerit = kok.querySelector('.el-seridi');
   const kaydirma = eskiSerit ? eskiSerit.scrollLeft : 0;

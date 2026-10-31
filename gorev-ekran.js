@@ -17,6 +17,7 @@ import {
   kalanMs,
   sonucVerisi,
   sureYazisi,
+  tahminHatasi,
 } from './gorev.js';
 
 const NASIL_OYNANIR = [
@@ -54,7 +55,18 @@ export function gorevEkraniKur(k) {
   // Küçük yardımcılar
   // -------------------------------------------------------------------------
 
+  // Tahmin kutusunda imleç varsa bırakır. iOS'ta düğmeye basmak odağı kutudan almaz;
+  // "yazım sürüyor" kancası da odaktaki kutu yüzünden çizimi atlar, bu yüzden basılan düğmenin
+  // sonucu (kapanan panel, yeni durum) görünmez. Düğmeye basılınca odağı biz bırakırız.
+  function odagiBirak() {
+    const aktif = document.activeElement;
+    if (aktif && aktif.tagName === 'INPUT' && aktif.classList.contains('gv-tahmin')) {
+      aktif.blur();
+    }
+  }
+
   function hamleGonder(eylem) {
+    odagiBirak();
     return k.hamle(eylem).then((sonuc) => {
       if (sonuc && !sonuc.ok && sonuc.hata === 'mesgul') {
         k.mesajGoster('Bir saniye, tekrar dene.');
@@ -320,6 +332,7 @@ export function gorevEkraniKur(k) {
           class: 'secenek',
           'aria-pressed': durumum.yakalaHedef === x.o.id ? 'true' : 'false',
           onclick: () => {
+            odagiBirak();
             durumum.yakalaHedef = x.o.id;
             k.render();
           },
@@ -359,6 +372,12 @@ export function gorevEkraniKur(k) {
         k.mesajGoster('Önce kimden şüphelendiğini seç.');
         return;
       }
+      // Boş ya da çok uzun tahmin: kutu açık kalsın, uyarı çıksın
+      const tahminSorunu = tahminHatasi(girdi.value);
+      if (tahminSorunu) {
+        k.mesajGoster(tahminSorunu);
+        return;
+      }
       durumum.gonderiliyor = true;
       hamleGonder({ tip: 'yakala', hedef: durumum.yakalaHedef, tahmin: girdi.value }).then((sonuc) => {
         durumum.gonderiliyor = false;
@@ -389,6 +408,7 @@ export function gorevEkraniKur(k) {
           {
             class: 'dugme ikincil',
             onclick: () => {
+              odagiBirak();
               durumum.yakalaAcik = false;
               k.render();
             },

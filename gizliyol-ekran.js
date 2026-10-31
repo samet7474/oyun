@@ -52,6 +52,7 @@ export function gizliyolEkraniKur(k) {
     nasilAcik: false,
     sayimBitis: 0, // çalışan geri sayımın bitiş anı (ms)
     sayimId: null, // geri sayım zamanlayıcısı
+    kaydiriciTutuluyor: 0, // Bak süresi kaydırıcısına parmak değdiği an (ms), 0 = değmiyor
   };
 
   // -------------------------------------------------------------------------
@@ -192,6 +193,22 @@ export function gizliyolEkraniKur(k) {
     );
   }
 
+  // Parmak kaldırıldı: bekleyen oda güncellemesi varsa şimdi çizilir
+  function kaydiriciBirak() {
+    if (durumum.kaydiriciTutuluyor === 0) {
+      return;
+    }
+    durumum.kaydiriciTutuluyor = 0;
+    setTimeout(() => k.render(), 100);
+  }
+
+  // Parmak şu an kaydırıcıda mı? (app.js render'ı bu sırada çizimi atlar.)
+  // Bırakma olayı hiç gelmezse (sekme değişti vb.) 15 saniye sonra kendiliğinden biter.
+  function kaydiriciSurukleniyor() {
+    const baslangic = durumum.kaydiriciTutuluyor;
+    return baslangic !== 0 && Date.now() - baslangic < 15000;
+  }
+
   // Bak süresi: ses ayarı gibi kaydırılarak seçilir.
   // Kaydırırken yalnız yazı değişir; parmak bırakılınca ayar odaya yazılır.
   function bakmaKaydiricisi(d, sahipMi) {
@@ -209,6 +226,12 @@ export function gizliyolEkraniKur(k) {
       oninput: (olay) => {
         yazi.textContent = olay.target.value + ' sn';
       },
+      // Parmak kaydırıcıdayken gelen oda güncellemesi kaydırıcıyı eski değere zıplatmasın
+      onpointerdown: () => {
+        durumum.kaydiriciTutuluyor = Date.now();
+      },
+      onpointerup: () => kaydiriciBirak(),
+      onpointercancel: () => kaydiriciBirak(),
       onchange: (olay) => {
         const yeni = Number(olay.target.value);
         if (yeni !== bakmaSuresiOku(istemci.durum)) {
@@ -857,10 +880,12 @@ export function gizliyolEkraniKur(k) {
     durumum.gonderiliyor = false;
     durumum.gorulen = new Set();
     durumum.ilkCizim = true;
+    durumum.kaydiriciTutuluyor = 0;
     sayimiDurdur();
   }
 
   return {
+    kaydiriciSurukleniyor: kaydiriciSurukleniyor,
     lobiBolumu: lobiBolumu,
     sayfa: sayfa,
     sifirla: sifirla,
