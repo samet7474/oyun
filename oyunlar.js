@@ -11,6 +11,7 @@ import * as aynikafa from './aynikafa.js';
 import * as gizliyol from './gizliyol.js';
 import * as gorev from './gorev.js';
 import * as element from './element.js';
+import * as kule from './kule.js';
 
 export const OYUNLAR = [
   { id: 'uno', ad: 'UNO' },
@@ -20,6 +21,7 @@ export const OYUNLAR = [
   { id: 'gizliyol', ad: 'Gizli Yol' },
   { id: 'gorev', ad: 'Gizli Görev' },
   { id: 'element', ad: 'Element Düellosu' },
+  { id: 'kule', ad: 'Risk Kulesi' },
 ];
 
 export function oyunBilinir(id) {
@@ -54,6 +56,9 @@ export function yeniOda(sahipId, sahipAd, oyun = 'uno') {
   if (oyun === 'element') {
     return element.yeniOda(sahipId, sahipAd);
   }
+  if (oyun === 'kule') {
+    return kule.yeniOda(sahipId, sahipAd);
+  }
   return uno.yeniOda(sahipId, sahipAd);
 }
 
@@ -77,6 +82,9 @@ function lobiyiDegistir(durum, oyun) {
   }
   if (oyun === 'element') {
     return element.lobiKur(oyuncular, durum.sahip);
+  }
+  if (oyun === 'kule') {
+    return kule.lobiKur(oyuncular, durum.sahip);
   }
   const ilk = oyuncular[0];
   let yeni = uno.yeniOda(ilk.id, ilk.ad);
@@ -124,7 +132,7 @@ function oyunSec(durum, eylem) {
 // banka: yalnız "Beni ne kadar tanıyorsun" için soru bankası (testler küçük bir banka verir).
 // kelimeListesi: yalnız "Kelime düellosu" için { cevaplar, gecerli } (testler küçük bir liste verir).
 // ipuclari: yalnız "Aynı Kafa" için ipucu dizisi (testler küçük bir liste verir).
-// gorevler, simdi: yalnız "Gizli Görev" için görev listesi ve şimdiki zaman (ms); testler sabitler.
+// gorevler, simdi: "Gizli Görev" için görev listesi; simdi (şimdiki zaman, ms) "Risk Kulesi" için de kullanılır; testler sabitler.
 export function uygula(
   durum,
   eylem,
@@ -156,6 +164,9 @@ export function uygula(
   }
   if (oyun === 'element') {
     return element.uygula(durum, eylem, rastgele);
+  }
+  if (oyun === 'kule') {
+    return kule.uygula(durum, eylem, rastgele, simdi);
   }
   if (oyun === 'uno') {
     return uno.uygula(durum, eylem, rastgele);

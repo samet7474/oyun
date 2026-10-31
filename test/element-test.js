@@ -769,7 +769,7 @@ function kimlikler(d) {
 test('yönlendirici: oyun listesi Element Düellosu içerir, oda kurulabilir', () => {
   assert.deepEqual(
     OYUNLAR.map((o) => o.id),
-    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element']
+    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule']
   );
   assert.equal(OYUNLAR.find((o) => o.id === 'element').ad, 'Element Düellosu');
   const d = yonlendirYeniOda(pid(0), 'Ali', 'element');

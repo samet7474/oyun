@@ -1,9 +1,9 @@
 // app.js - Ekranlar, çizim ve Supabase senkronu.
-// Oyun kuralları uno.js, tanis.js, kelime.js, aynikafa.js, gizliyol.js, gorev.js ve element.js içindedir, hareketler oyunlar.js üzerinden geçer;
+// Oyun kuralları uno.js, tanis.js, kelime.js, aynikafa.js, gizliyol.js, gorev.js, element.js ve kule.js içindedir, hareketler oyunlar.js üzerinden geçer;
 // burada sadece göstermek ve eşitlemek var. "Beni ne kadar tanıyorsun" ekranları tanis-ekran.js'te,
 // "Kelime düellosu" ekranları kelime-ekran.js'te, "Aynı Kafa" ekranları aynikafa-ekran.js'te,
 // "Gizli Yol" ekranları gizliyol-ekran.js'te, "Gizli Görev" ekranları gorev-ekran.js'te,
-// "Element Düellosu" ekranları element-ekran.js'te.
+// "Element Düellosu" ekranları element-ekran.js'te, "Risk Kulesi" ekranları kule-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { uygula, oyunId, oyunBilinir, OYUNLAR } from './oyunlar.js';
@@ -13,6 +13,7 @@ import { aynikafaEkraniKur } from './aynikafa-ekran.js';
 import { gizliyolEkraniKur } from './gizliyol-ekran.js';
 import { gorevEkraniKur } from './gorev-ekran.js';
 import { elementEkraniKur } from './element-ekran.js';
+import { kuleEkraniKur } from './kule-ekran.js';
 import { bekleyenSoruVarMi } from './gorev.js';
 import {
   yeniOda,
@@ -159,6 +160,17 @@ const gorevEkran = gorevEkraniKur({
 
 // "Element Düellosu" ekranları
 const elementEkran = elementEkraniKur({
+  el: el,
+  istemci: istemci,
+  hamle: hamle,
+  mesajGoster: mesajGoster,
+  render: render,
+  benimIndeks: benimIndeks,
+  ustCubuk: ustCubuk,
+});
+
+// "Risk Kulesi" ekranları
+const kuleEkran = kuleEkraniKur({
   el: el,
   istemci: istemci,
   hamle: hamle,
@@ -392,6 +404,7 @@ function odaBaglan(kod, satir) {
   gizliyolEkran.sifirla();
   gorevEkran.sifirla();
   elementEkran.sifirla();
+  kuleEkran.sifirla();
   try {
     history.replaceState(null, '', '#' + kod);
   } catch (hata) {
@@ -524,7 +537,10 @@ async function hamle(eylem) {
 
 async function odadanCik() {
   istemci.gecis = true;
-  if (istemci.durum && istemci.durum.asama === 'lobi' && benimIndeks() >= 0) {
+  const durum = istemci.durum;
+  // Lobide herkes çıkabilir; Risk Kulesi'nde oyun sürerken de çıkılır ki sıra kilitlenmesin
+  const cikilabilir = durum && (durum.asama === 'lobi' || (durum.oyun === 'kule' && durum.asama === 'oyun'));
+  if (cikilabilir && benimIndeks() >= 0) {
     await hamle({ tip: 'cikar' });
   }
   istemci.gecis = false;
@@ -541,6 +557,7 @@ async function odadanCik() {
   gizliyolEkran.sifirla();
   gorevEkran.sifirla();
   elementEkran.sifirla();
+  kuleEkran.sifirla();
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch (hata) {
@@ -604,6 +621,9 @@ function benimSiramMi(d) {
   }
   if (d.oyun === 'element') {
     return d.asama === 'secim' && !d.secimler[idx]; // seçimimi kilitlememişim
+  }
+  if (d.oyun === 'kule') {
+    return d.asama === 'oyun' && d.sira === idx; // zar atma sırası bende
   }
   return d.asama === 'oyun' && d.sira === idx;
 }
@@ -945,7 +965,7 @@ function ustCubuk() {
           {
             class: 'link-dugme',
             onclick: () => {
-              if (d.asama === 'bitti' && ['tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element'].includes(d.oyun)) {
+              if (d.asama === 'bitti' && ['tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule'].includes(d.oyun)) {
                 hamle({ tip: 'yeniOyun' });
               } else if (window.confirm('Oyun yarıda kalacak ve herkes lobiye dönecek. Emin misin?')) {
                 hamle({ tip: 'yeniOyun' });
@@ -1112,6 +1132,9 @@ function oyunBolumu(d, sahipMi) {
   }
   if (oyun === 'element') {
     return elementEkran.lobiBolumu(d, sahipMi);
+  }
+  if (oyun === 'kule') {
+    return kuleEkran.lobiBolumu(d, sahipMi);
   }
   return unoLobiBolumu(d, sahipMi);
 }
@@ -1507,7 +1530,7 @@ function elSonuKatmani(d, ben) {
 
 // Her oyunun kendi rengi var: UNO yeşil çuha, "Beni ne kadar tanıyorsun" mor-gül, "Kelime düellosu" koyu ardıç,
 // "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın,
-// "Element Düellosu" mürdüm-indigo
+// "Element Düellosu" mürdüm-indigo, "Risk Kulesi" gün batımı tuğlası
 const TEMA_RENKLERI = {
   uno: '#0c2f26',
   tanis: '#241437',
@@ -1516,12 +1539,13 @@ const TEMA_RENKLERI = {
   gizliyol: '#0a1428',
   gorev: '#17181d',
   element: '#1a1040',
+  kule: '#3a1410',
 };
 
 function temaUygula(d) {
   const oyun = istemci.kod && d ? oyunId(d) : 'uno';
   const sayfaKoku = document.documentElement;
-  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa' || oyun === 'gizliyol' || oyun === 'gorev' || oyun === 'element') {
+  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa' || oyun === 'gizliyol' || oyun === 'gorev' || oyun === 'element' || oyun === 'kule') {
     sayfaKoku.setAttribute('data-tema', oyun);
   } else {
     sayfaKoku.removeAttribute('data-tema');
@@ -1613,6 +1637,11 @@ function render() {
 
   if (oyunId(d) === 'element') {
     kok.append(...elementEkran.sayfa(d, ben));
+    return;
+  }
+
+  if (oyunId(d) === 'kule') {
+    kok.append(...kuleEkran.sayfa(d, ben));
     return;
   }
 

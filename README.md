@@ -1,13 +1,13 @@
 # Oyun Masası
 
-Arkadaşlar kendi telefonundan aynı linki açıp yedi oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol**, **Gizli Görev** ve **Element Düellosu**.
+Arkadaşlar kendi telefonundan aynı linki açıp sekiz oyundan birini oynar: **UNO**, **Beni ne kadar tanıyorsun**, **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol**, **Gizli Görev**, **Element Düellosu** ve **Risk Kulesi**.
 Sunucu kodu yok: her hamle tarayıcıda hesaplanır ve Supabase tablosuna (`oyun_odalari`) yazılır.
 GitHub Pages'te çalışır, derleme gerekmez.
 
 ## Nasıl oynanır
 1. Adını yaz, **Oda kur**'a bas. Oda UNO olarak açılır.
 2. Çıkan linki ya da 4 harfli kodu arkadaşına gönder. O da adını yazıp **Katıl**'a basar.
-3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol**, **Gizli Görev** ya da **Element Düellosu**), ayarları yapar ve **Oyunu başlat**'a basar.
+3. Ev sahibi lobide oyunu seçer (**UNO**, **Beni ne kadar tanıyorsun** **Kelime düellosu**, **Aynı Kafa**, **Gizli Yol**, **Gizli Görev**, **Element Düellosu** ya da **Risk Kulesi**), ayarları yapar ve **Oyunu başlat**'a basar.
    Oyun yalnız lobide değişir; oyun bitince **Lobiye dön** ile lobiye inilir.
 
 ### UNO
@@ -111,6 +111,24 @@ Su ateşi söndürür, ateş toprağı (otları) yakar, toprak suyu emer.
 - Oyun tam 2 kişiliktir: lobide 2'den fazla kişi varken Element Düellosu seçilemez.
 - Bilinen sınır: eller ve kilitli seçimler oda satırında durur (durum herkese açıktır); ekran rakibin elini ve kilitli seçimini açılıştan önce çizmez.
 
+### Risk Kulesi
+İki ile dört kişi, sırayla oynanan zar oyunu. Herkesin kendi kulesi ve kasası var.
+- **Zar at:** sırası gelen oyuncu tek zar atar (1-6). Çıkan sayı o turdaki kulesine bir kat olur; kat üstünde sayısı yazar ve kule yükselir.
+- **1 gelirse** kule yıkılır: o turda biriken her şey gider ve sıra sonrakine geçer (yıkılma animasyonu herkeste oynar).
+- **Çift kat:** atılan sayı bir önceki katın sayısıyla aynıysa (1 hariç) o kat iki kat sayılır, katın üstünde "x2" görünür. Yalnız bir önceki kat kıyaslanır.
+- **Dur:** istediğin an "Dur"a basabilirsin; kulenin toplamı kasana eklenir ve sıra geçer. İlk zarı atmadan durulamaz.
+- **Çatlak taş:** oyun başına herkesin 1 hakkı var. Sırası başında ya da sırası kendinde değilken bir rakip seçilir; o rakibin **bir sonraki turunda** 1 de 2 de kuleyi yıkar.
+  Rakibin adı yanında çatlak simgesi görünür, rakip kendi turunda büyük bir uyarı görür. Bir oyuncunun üstünde aynı anda en fazla bir çatlak olur;
+  çatlak o oyuncunun turu bitince (durarak ya da yıkılarak) kalkar. Kendine atılamaz, sırası gelen oyuncu zar attıktan sonra atamaz.
+  Şu an oynayan oyuncuya atılan çatlak bu turu etkilemez, bir sonraki turuna kalır.
+- **Kazanan:** kasası hedefe (ayar: 50 / 100 / 150) ulaşan ya da geçen ilk oyuncu kazanır. Hedefe "Dur" ile ulaşılır; turun ortasında hedef geçilse bile durmadan sayılmaz. Kimse fazladan tur oynamaz.
+- **Sırayı geç:** sırası gelen oyuncu sayfadan çıkarsa oyun kilitlenmesin diye, 60 saniye boyunca zar atılmaz ve "Dur"a basılmazsa diğer oyuncular "Sırayı geç" düğmesini görür.
+  Geçirilen turun kulesi gider. Son hamle zamanı durumda `sonHamle` olarak tutulur; motor `simdi` (ms) parametresi alır, testler sabitler.
+- Oyun sürerken **Çık**'a basan oyuncu odadan çıkar; sırası ondaysa kulesi gider ve sıra sonrakine geçer, tek kişi kalırsa o kazanır.
+- Zar sonucu motorda `rastgele` ile üretilir (zarı atan istemcinin hamlesi; durum sürüm kontrolüyle yazılır).
+- Ekranda ortada yükselen kule (CSS blokları), yuvarlanan zar (inline SVG), kasalar ve hedefe ilerleme çubukları, turdaki toplam, oyun içi en yüksek kule rekoru ve "Nasıl oynanır" kutusu vardır.
+  Oyun sonunda kazanan, en yüksek kule ve en çok yıkılan görünür. Gizli bilgi yoktur: başkasının turunu herkes canlı izler.
+
 Aynı tarayıcıdan aynı linke dönersen koltuğuna otursun diye kimliğin tarayıcıda saklanır.
 
 ## Testleri çalıştırma
@@ -122,6 +140,7 @@ node test/aynikafa-test.js
 node test/gizliyol-test.js
 node test/gorev-test.js
 node test/element-test.js
+node test/kule-test.js
 ```
 `tanis-test.js` "Beni ne kadar tanıyorsun" motorunu ve oyun yönlendiriciyi (`oyunlar.js`) sınar.
 `kelime-test.js` "Kelime düellosu" motorunu (renklendirme, Türkçe harfler, tur akışı, çakışma) ve yönlendiriciyi sınar;
@@ -130,11 +149,12 @@ kendi küçük kelime listesini kullanır.
 `gizliyol-test.js` "Gizli Yol" motorunu (yol kuralları, doğru ve yanlış adım, başa dönme, kalıcı işaret, pes, tur ve oyun sonu, beraberlik) ve yönlendiriciyi sınar.
 `gorev-test.js` "Gizli Görev" motorunu (dağıtım, onay ve çoğunluk, yakalama, değiştirme hakkı, hedef puan ve süre bitişi, gizlilik yardımcıları) ve yönlendiriciyi sınar.
 `element-test.js` "Element Düellosu" motorunu (deste, dağıtım, yenme döngüsü, özel kartlar ve kombinasyonları, geçersiz seçimler, el tamamlama, hedef puan ve eller boşalınca bitiş, gizlilik yardımcısı) ve yönlendiriciyi sınar.
+`kule-test.js` "Risk Kulesi" motorunu (zar ekleme, 1'de yıkılma, çift kat, dur ve kasa, çatlak taş kuralları, hedefe ulaşma, sıra döngüsü, oyuncu ayrılınca sıra, sırayı geç) ve yönlendiriciyi sınar.
 Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
 - `index.html`: sayfa iskeleti, Supabase betiği
-- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın, "Element Düellosu" mürdüm-indigo temayla açılır
+- `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın, "Element Düellosu" mürdüm-indigo, "Risk Kulesi" gün batımı tuğlası temayla açılır
 - `app.js`: ekranlar, UNO masası, Supabase senkronu
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
 - `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
@@ -142,6 +162,7 @@ Hata varsa çıkış kodu 1 olur.
 - `gizliyol-ekran.js`: "Gizli Yol" ekranları (lobi ayarları, yol çizme, bulma tahtası, rakip ilerlemesi, açık yollar, sonuç)
 - `gorev-ekran.js`: "Gizli Görev" ekranları (lobi ayarları, görev kartları, onay ve yakalama soruları, puan tablosu, geri sayım, sonuç)
 - `element-ekran.js`: "Element Düellosu" ekranları (lobi ayarları, kartlar, masa ve açılış animasyonu, el şeridi, oynananlar şeridi, döngü şeması, sonuç)
+- `kule-ekran.js`: "Risk Kulesi" ekranları (lobi ayarları, kasalar, kule ve zar animasyonu, çatlak taş paneli ve uyarısı, sırayı geç, sonuç)
 - `oyunlar.js`: oyun yönlendirici; hareketi `durum.oyun`'a göre doğru motora verir, oyun seçimini (`oyunSec`) yapar
 - `uno.js`: UNO kuralları (saf motor, DOM ve ağ yok)
 - `gizliyol.js`: Gizli Yol kuralları (saf motor, DOM ve ağ yok)
@@ -149,6 +170,7 @@ Hata varsa çıkış kodu 1 olur.
 - `gorev.js`: Gizli Görev kuralları (saf motor, DOM ve ağ yok)
 - `gorev-gorevler.js`: Gizli Görev görev bankası
 - `element.js`: Element Düellosu kuralları (saf motor, DOM ve ağ yok)
+- `kule.js`: Risk Kulesi kuralları (saf motor, DOM ve ağ yok)
 - `kelime.js`: "Kelime düellosu" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa.js`: "Aynı Kafa" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa-ipuclari.js`: "Aynı Kafa" ipucu bankası
@@ -162,6 +184,7 @@ Hata varsa çıkış kodu 1 olur.
 - `test/gizliyol-test.js`: Gizli Yol motoru ve yönlendirici testleri
 - `test/gorev-test.js`: Gizli Görev motoru ve yönlendirici testleri
 - `test/element-test.js`: Element Düellosu motoru ve yönlendirici testleri
+- `test/kule-test.js`: Risk Kulesi motoru ve yönlendirici testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar

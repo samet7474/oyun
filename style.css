@@ -1,4 +1,4 @@
-/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun", "Kelime düellosu", "Aynı Kafa", "Gizli Yol", "Gizli Görev" ve "Element Düellosu"). Önce telefon (360-430px), büyük ekranda ortalanır. */
+/* Oyun Masası - stiller (UNO, "Beni ne kadar tanıyorsun", "Kelime düellosu", "Aynı Kafa", "Gizli Yol", "Gizli Görev", "Element Düellosu" ve "Risk Kulesi"). Önce telefon (360-430px), büyük ekranda ortalanır. */
 
 :root {
   --bg: #0c2f26;
@@ -88,6 +88,19 @@
   --vurgu: #e6b422;
   --iyi: #5ed38b;
   --kotu: #ff6b6b;
+}
+
+/* "Risk Kulesi" odasında gün batımı: koyu kızıl zemin, tuğla ve turuncu vurgu */
+:root[data-tema='kule'] {
+  --bg: #3a1410;
+  --bg-ust: #8a3a22;
+  --panel: rgba(30, 8, 4, 0.4);
+  --panel-acik: rgba(255, 190, 120, 0.12);
+  --yazi: #fff1e2;
+  --yazi-soluk: #e5b99b;
+  --vurgu: #ffb454;
+  --iyi: #8be08f;
+  --kotu: #ff7a68;
 }
 
 /* "Element Düellosu" odasında koyu, mistik mürdüm-indigo masa; kartlar canlı */
@@ -1231,6 +1244,11 @@ button {
 .secenekler.oyun-secici .secenek[data-oyun='element'] {
   flex: 1 1 100%;
   order: 7;
+}
+
+.secenekler.oyun-secici .secenek[data-oyun='kule'] {
+  flex: 1 1 100%;
+  order: 8;
 }
 
 .cipler {
@@ -3749,5 +3767,499 @@ button {
   .ed-alt.belir-gec {
     animation-duration: 0.01s;
     animation-delay: 0s;
+  }
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Risk Kulesi                                                         */
+/* ------------------------------------------------------------------ */
+
+.kl-sayfa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 16px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+/* Kasalar ve hedefe ilerleme çubukları */
+.kl-kasalar {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kl-kasa {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 2px solid transparent;
+}
+
+.kl-kasa.sirada {
+  border-color: var(--vurgu);
+  box-shadow: 0 0 14px rgba(255, 180, 84, 0.35);
+}
+
+.kl-kasa.ben .ad {
+  color: var(--vurgu);
+}
+
+.kl-kasa.kazanan {
+  border-color: var(--vurgu);
+  background: rgba(255, 180, 84, 0.16);
+}
+
+.kl-kasa-ust {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kl-kasa .ad {
+  flex: 1;
+  min-width: 0;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kl-kasa .puan {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.kl-kasa-alt {
+  font-size: 13px;
+  color: var(--yazi-soluk);
+}
+
+.kl-sira-etiketi {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--vurgu);
+  color: #3a1410;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.kl-catlak-simge {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  animation: kl-titre 1.4s ease-in-out infinite;
+}
+
+.kl-cubuk {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.kl-cubuk-dolu {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff7a3d, #ffd070);
+  transition: width 0.5s ease;
+}
+
+/* Sahne: gün batımı gökyüzü, ortada kule */
+.kl-sahne {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 12px 10px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #2a1236 0%, #9c3d3a 45%, #ff9a4d 78%, #ffd186 100%);
+  border: 2px solid rgba(255, 200, 140, 0.35);
+  overflow: hidden;
+}
+
+.kl-sahne.benim {
+  border-color: var(--vurgu);
+}
+
+.kl-sahne-ust {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kl-sira-yazi {
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.kl-rekor {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffe2b8;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.kl-meydan {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  min-height: 290px;
+}
+
+.kl-kule-alani {
+  position: relative;
+  width: 150px;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.kl-zemin {
+  width: 150px;
+  height: 14px;
+  margin-top: 2px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #5b2a1a, #3a1710);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+}
+
+.kl-kule {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  width: 130px;
+}
+
+.kl-kat {
+  position: relative;
+  box-sizing: border-box;
+  width: 130px;
+  height: var(--kh, 34px);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: linear-gradient(180deg, var(--tugla, #c4552d), rgba(0, 0, 0, 0.18)), var(--tugla, #c4552d);
+  border: 2px solid rgba(40, 10, 4, 0.55);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.22);
+  color: #fff6e8;
+  font-weight: 900;
+  font-size: calc(var(--kh, 34px) * 0.55);
+  line-height: 1;
+}
+
+.kl-kat.x2 {
+  border-color: #ffd070;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 0 10px rgba(255, 208, 112, 0.7);
+}
+
+.kl-kat-x2 {
+  position: absolute;
+  right: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #ffd070;
+  color: #4a1a08;
+  font-size: calc(var(--kh, 34px) * 0.42);
+  font-weight: 900;
+}
+
+.kl-kat.yeni {
+  animation: kl-kat-in 0.7s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+
+/* Çatlaklı oyuncunun kulesinde çatlak çizgisi */
+.kl-kule.catlakli .kl-kat {
+  background-image: linear-gradient(115deg, transparent 48%, rgba(30, 6, 2, 0.75) 49%, rgba(30, 6, 2, 0.75) 51%, transparent 52%),
+    linear-gradient(180deg, var(--tugla, #c4552d), rgba(0, 0, 0, 0.18));
+}
+
+/* Yıkılan kule: bloklar yanlara düşüp dağılır */
+.kl-kat.dusuyor {
+  animation: kl-dus 1s ease-in both;
+}
+
+.kl-zar {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
+}
+
+.kl-zar.bos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  border: 3px dashed rgba(255, 241, 226, 0.55);
+  font-size: 30px;
+  font-weight: 900;
+  color: rgba(255, 241, 226, 0.8);
+  box-sizing: border-box;
+}
+
+.kl-zar.yuvarlaniyor {
+  animation: kl-yuvarlan 1s cubic-bezier(0.25, 0.8, 0.35, 1) both;
+}
+
+.kl-toplam {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(30, 8, 4, 0.5);
+  font-weight: 800;
+}
+
+.kl-toplam-sayi {
+  color: var(--vurgu);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Çatlak taş uyarısı */
+.kl-uyari {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 176, 46, 0.18);
+  border: 2px solid #ffb02e;
+  font-weight: 700;
+}
+
+.kl-uyari.buyuk {
+  padding: 16px 14px;
+  background: linear-gradient(180deg, #b32217, #7a1410);
+  border-color: #ffd070;
+  font-size: 18px;
+  animation: kl-uyari 0.9s ease-in-out infinite;
+}
+
+.kl-uyari.buyuk b {
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  color: #ffe9b0;
+}
+
+.kl-uyari.buyuk p {
+  margin: 4px 0 0;
+}
+
+.kl-uyari-simge {
+  flex: none;
+  width: 54px;
+  height: 54px;
+}
+
+.kl-uyari-simge.kucuk {
+  width: 32px;
+  height: 32px;
+}
+
+/* Düğmeler */
+.kl-eylem {
+  display: flex;
+  gap: 10px;
+}
+
+.kl-eylem .dugme {
+  flex: 1;
+  min-height: 64px;
+  font-size: 20px;
+}
+
+.kl-eylem .kl-zar-at {
+  flex: 1.3;
+}
+
+.kl-bekle {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kl-bekle .slogan {
+  margin: 0;
+  text-align: center;
+}
+
+.kl-catlak-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kl-catlak-panel .dugme {
+  min-height: 52px;
+}
+
+.kl-catlak-yok {
+  margin: 0;
+  text-align: center;
+}
+
+.kl-haberler ul,
+.kl-istatistik ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kl-nasil {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.kl-nasil summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.kl-nasil ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--yazi-soluk);
+}
+
+/* Oyun sonu */
+.kl-kazanan {
+  text-align: center;
+  padding: 18px 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 154, 77, 0.3), rgba(30, 8, 4, 0.4));
+  border: 2px solid var(--vurgu);
+}
+
+.kl-kazanan .ad {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--vurgu);
+  overflow-wrap: anywhere;
+}
+
+.kl-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@keyframes kl-kat-in {
+  0% {
+    transform: translateY(-160px) scale(1.05);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  78% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes kl-dus {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(calc(var(--dx) * 0.2), 0) rotate(calc(var(--don) * 0.2));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), calc(var(--dy) + 160px)) rotate(var(--don));
+    opacity: 0;
+  }
+}
+
+@keyframes kl-yuvarlan {
+  0% {
+    transform: translateY(-90px) rotate(-360deg) scale(0.8);
+    opacity: 0;
+  }
+  35% {
+    transform: translateY(0) rotate(-120deg) scale(1.05);
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(-26px) rotate(60deg);
+  }
+  75% {
+    transform: translateY(0) rotate(-14deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes kl-uyari {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(255, 208, 112, 0);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 18px rgba(255, 208, 112, 0.7);
+  }
+}
+
+@keyframes kl-titre {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-12deg);
+  }
+  75% {
+    transform: rotate(12deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kl-kat.yeni,
+  .kl-kat.dusuyor,
+  .kl-zar.yuvarlaniyor,
+  .kl-uyari.buyuk,
+  .kl-catlak-simge {
+    animation: none;
   }
 }
