@@ -15,6 +15,7 @@ GitHub Pages'te çalışır, derleme gerekmez.
 | **Gizli Görev** | 2-4 | Gizli görevini fark ettirmeden yap. |
 | **Taş Kağıt Makas** | 2 | Taş, kağıt, makas: kartını gizlice seç. |
 | **Risk Kulesi** | 2-4 | Zar at, kuleni yükselt, yıkılmadan dur. |
+| **Çiz Bil** | 2-4 | Biri gizli kelimeyi çizer, diğerleri bilir. |
 
 Oyunların bilgileri (ad, kişi sayısı, açıklama, simge, renk) `oyunlar.js` içindeki `OYUNLAR` listesindedir; lobideki oyun kartları oradan çizilir.
 
@@ -166,6 +167,25 @@ sırayla taş, kağıt, makas olarak okunur.)
 - Ekranda ortada yükselen kule (CSS blokları), yuvarlanan zar (inline SVG), kasalar ve hedefe ilerleme çubukları, turdaki toplam, oyun içi en yüksek kule rekoru ve "Nasıl oynanır" kutusu vardır.
   Oyun sonunda kazanan, en yüksek kule ve en çok yıkılan görünür. Gizli bilgi yoktur: başkasının turunu herkes canlı izler.
 
+### Çiz Bil
+İki ile dört kişi. Biriniz parmağıyla gizli bir kelimeyi çizer, çizim diğerlerinin ekranında anında görünür, onlar tahmin eder. Sonra sıra sonrakine geçer.
+- **Kelime seçme:** sırası gelen (çizen) 3 kelimeden birini seçer. 20 saniyede seçmezse ilk kelime alınır. Diğerleri "… kelime seçiyor" görür.
+- **Çizme:** beyaz kare tahtaya parmakla ya da fareyle çizilir (çizerken sayfa kaymaz). 4 renk (siyah, kırmızı, mavi, yeşil), **İnce / Kalın**, **Silgi**, **Geri al** (son çizgiyi siler) ve **Temizle** var.
+  Çizen kelimeyi üstte görür; tahminciler yalnız harf sayısını görür (`_ _ _ _  4 harf`).
+- **Tahmin:** tahminciler cevabı yazıp **Tahmin et**'e basar (en fazla 30 harf, istediğin kadar deneme). Yanlış tahminler herkesin akışında görünür; doğru cevap hiç yazılmaz, yalnız "Ayşe bildi!" çıkar.
+  Bir harf farkla yanlışsa yalnız sana "Çok yakın!" yazar.
+- **Karşılaştırma hoşgörülüdür:** büyük/küçük harf, Türkçe harf farkı (ı/i, ş/s, ç/c, ğ/g, ö/o, ü/u), şapka, boşluk ve noktalama yok sayılır: "kopek" = "Köpek", "denizfeneri" = "deniz feneri".
+- **Puan:** bilen, kalan süreye göre 10 (hemen) ile 2 (son saniye) arası puan alır; erken bilen daha çok alır. Çizen, her bilen için o kişinin puanının yarısını (yukarı yuvarlanmış) alır. Bilemeyen ve kimseye bildiremeyen çizen puan almaz.
+- Herkes bilince ya da süre dolunca kelime açılır: kim kaçıncı bildi, kim kaç puan aldı, çizim de ekranda kalır. Herhangi biri **Sonraki çizim**'e basabilir.
+- **Tur:** herkes bir kez çizince bir tur biter. Sonda en çok puanı olan kazanır; eşitse "Berabere" yazar. Ev sahibi **Tekrar oyna** (yeni kelimeler) ya da **Lobiye dön** der.
+- Ayarlar (ev sahibi): tur sayısı 1 / 2 / 3 (varsayılan 2), çizim süresi 60 / 75 / 90 saniye (varsayılan 75).
+- Odada sunulan kelime, liste bitene kadar tekrar gelmez. Kelime bankası `cizbil-kelimeler.js` içindedir (238 çizilebilir, somut kelime).
+- **Canlı çizim nasıl gider:** çizgiler oda satırına yazılmaz. Çizenin telefonu çizgiyi yaklaşık 120 ms'de bir küçük parçalar halinde Supabase Realtime **broadcast** kanalına (`cizbil-<oda kodu>`) gönderir.
+  Satıra yalnız tur, kelime, tahmin ve puan yazılır (her hamle eskisi gibi `surum` kontrolüyle). Sayfayı yenileyen ya da bağlantısı kopup gelen kişi kanaldan tam tahtayı ister, çizenin telefonu gönderir;
+  arada kaçan parça fark edilirse de tam tahta istenir. Çizen sayfasını yenilerse çizimi tarayıcısından geri gelir.
+- Süre her telefonun saatine göre sayılır; süre dolunca önce çizenin telefonu, 3 saniye sonra diğerleri "süre bitti" hamlesini dener (çizen çıksa da oyun kilitlenmez).
+- Bilinen sınırlar: gizli kelime oda satırında durur (durum herkese açıktır), ekran tahmincilere göstermez. Çizen telefon kapalıyken yeni gelen biri tahtayı göremez (tahta yalnız çizenin telefonunda ve kanalda durur).
+
 Aynı tarayıcıdan aynı linke dönersen koltuğuna otursun diye kimliğin tarayıcıda saklanır.
 
 ## Testleri çalıştırma
@@ -178,6 +198,7 @@ node test/gizliyol-test.js
 node test/gorev-test.js
 node test/element-test.js
 node test/kule-test.js
+node test/cizbil-test.js
 node test/genel-test.js
 ```
 Hepsini bir arada: `for t in test/*.js; do node $t; done`
@@ -190,11 +211,13 @@ kendi küçük kelime listesini kullanır.
 `gorev-test.js` "Gizli Görev" motorunu (dağıtım, onay ve çoğunluk, yakalama, değiştirme hakkı, hedef puan ve süre bitişi, gizlilik yardımcıları) ve yönlendiriciyi sınar.
 `element-test.js` "Taş Kağıt Makas" motorunu (deste, dağıtım, yenme döngüsü, eski ateş/su/toprak anahtarlarının eşlenmesi, özel kartlar ve kombinasyonları, geçersiz seçimler, el tamamlama, hedef puan ve eller boşalınca bitiş, gizlilik yardımcısı) ve yönlendiriciyi sınar.
 `kule-test.js` "Risk Kulesi" motorunu (zar ekleme, 1'de yıkılma, çift kat, dur ve kasa, çatlak taş kuralları, hedefe ulaşma, sıra döngüsü, oyuncu ayrılınca sıra, sırayı geç) ve yönlendiriciyi sınar.
+`cizbil-test.js` "Çiz Bil" motorunu (kelime bankası, Türkçe harflerle hoşgörülü tahmin, çok yakın, kelime seçimi ve seçim süresi, tekrarsız seçenekler, süreye göre puan ve çizen puanı, herkes bilince bitiş, süre ve tolerans, rol dönüşü, oyun sonu ve beraberlik, tekrar oyna) ile canlı tahta yardımcılarını (parçaların birleşmesi, kaçan parça, temizle, geri al, bozuk mesaj, nokta sınırı) ve yönlendiriciyi sınar.
 Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
 - `index.html`: sayfa iskeleti, Supabase betiği, sürüm numarası (`SURUM`) ve modül listesi (import haritası)
 - `style.css`: tüm görünüm (kartlar dahil, resim yok); "Beni ne kadar tanıyorsun" odası mor-gül, "Kelime düellosu" koyu ardıç, "Aynı Kafa" sıcak mercan, "Gizli Yol" gece mavisi, "Gizli Görev" antrasit ve altın, "Taş Kağıt Makas" koyu deniz yeşili ve sarı, "Risk Kulesi" gün batımı tuğlası temayla açılır
+  ("Çiz Bil" odası grafit zemin, beyaz tahta ve pembe vurguyla açılır)
 - `app.js`: ekranlar, lobi (oyun kartları, Kim önde), UNO masası, Supabase senkronu, bağlantı şeridi
 - `tanis-ekran.js`: "Beni ne kadar tanıyorsun" ekranları (lobi ayarları, Sorularım, soru, sonuç, özet)
 - `kelime-ekran.js`: "Kelime düellosu" ekranları (lobi ayarları, tahta, klavye, rakip tahtaları, sonuç, özet)
@@ -202,6 +225,7 @@ Hata varsa çıkış kodu 1 olur.
 - `gizliyol-ekran.js`: "Gizli Yol" ekranları (lobi ayarları, kutu seçme, Bak ve geri sayım, çözme tahtası, rakip ilerlemesi, açık yollar, sonuç)
 - `gorev-ekran.js`: "Gizli Görev" ekranları (lobi ayarları, görev kartları, onay ve yakalama soruları, puan tablosu, geri sayım, sonuç)
 - `element-ekran.js`: "Taş Kağıt Makas" ekranları (lobi ayarları, kartlar, masa ve açılış animasyonu, el şeridi, oynananlar şeridi, döngü şeması, sonuç)
+- `cizbil-ekran.js`: "Çiz Bil" ekranları (lobi ayarları, kelime seçimi, tuval ve araçlar, tahmin kutusu ve akış, açılış, sonuç) ve canlı çizim kanalı (Realtime broadcast)
 - `kule-ekran.js`: "Risk Kulesi" ekranları (lobi ayarları, kasalar, kule ve zar animasyonu, çatlak taş paneli ve uyarısı, sırayı geç, sonuç)
 - `oyunlar.js`: oyun yönlendirici; oyun bilgileri (`OYUNLAR`), hareketi `durum.oyun`'a göre doğru motora verme, oyun seçimi (`oyunSec`) ve "Kim önde" genel skoru (`genelGuncelle`)
 - `onay.js`: sitenin kendi onay penceresi (`onayIste`)
@@ -213,6 +237,8 @@ Hata varsa çıkış kodu 1 olur.
 - `gorev-gorevler.js`: Gizli Görev görev bankası
 - `element.js`: Taş Kağıt Makas kuralları (saf motor, DOM ve ağ yok)
 - `kule.js`: Risk Kulesi kuralları (saf motor, DOM ve ağ yok)
+- `cizbil.js`: Çiz Bil kuralları ve canlı tahta yardımcıları (saf motor, DOM ve ağ yok)
+- `cizbil-kelimeler.js`: Çiz Bil kelime bankası
 - `kelime.js`: "Kelime düellosu" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa.js`: "Aynı Kafa" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa-ipuclari.js`: "Aynı Kafa" ipucu bankası
@@ -227,9 +253,11 @@ Hata varsa çıkış kodu 1 olur.
 - `test/gorev-test.js`: Gizli Görev motoru ve yönlendirici testleri
 - `test/element-test.js`: Taş Kağıt Makas motoru ve yönlendirici testleri
 - `test/kule-test.js`: Risk Kulesi motoru ve yönlendirici testleri
+- `test/cizbil-test.js`: Çiz Bil motoru, tahta yardımcıları ve yönlendirici testleri
 - `test/genel-test.js`: oyun bilgileri, Kim önde genel skoru ve sürüm listesi testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 
 ## Bilinen sınırlar
 Tüm oyun durumu tek satırda durduğu için teknik olarak herkesin eli (UNO), verilmiş cevaplar (tanış oyunu ve Aynı Kafa), rakibin yolu (Gizli Yol; ekran yalnız Bak süresince gösterir), rakibin eli ve kilitli seçimi (Taş Kağıt Makas) ve gizli kelime ile rakiplerin harfleri (kelime düellosu) okunabilir; ekran bunları zamanı gelmeden göstermez.
+Çiz Bil'de gizli kelime de satırda durur; çizim ise satırda değil, yalnız broadcast kanalında ve çizenin telefonunda durur.
 Satırın `oyun` sütunu hep `uno` kalır; gerçek oyun `durum.oyun` içindedir (böylece eski odalar ve veritabanı değişmeden çalışır).

@@ -776,7 +776,7 @@ function kimlikler(d) {
 test('yönlendirici: oyun listesi Risk Kulesi içerir, oda kurulabilir', () => {
   assert.deepEqual(
     OYUNLAR.map((o) => o.id),
-    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule']
+    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule', 'cizbil']
   );
   assert.equal(OYUNLAR.find((o) => o.id === 'kule').ad, 'Risk Kulesi');
   const d = yonlendirYeniOda(pid(0), 'Ali', 'kule');

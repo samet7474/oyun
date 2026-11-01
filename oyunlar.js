@@ -12,6 +12,7 @@ import * as gizliyol from './gizliyol.js';
 import * as gorev from './gorev.js';
 import * as element from './element.js';
 import * as kule from './kule.js';
+import * as cizbil from './cizbil.js';
 
 // Her oyunun bilgisi tek yerden gelir (lobideki oyun kartları bunu kullanır).
 //   enAz, enCok : kaç kişiyle oynanır
@@ -106,6 +107,16 @@ export const OYUNLAR = [
     renk: '#ffb454',
     temaRengi: '#3a1410',
   },
+  {
+    id: 'cizbil',
+    ad: 'Çiz Bil',
+    enAz: 2,
+    enCok: 4,
+    aciklama: 'Biri gizli kelimeyi çizer, diğerleri bilir.',
+    simge: '🎨',
+    renk: '#ff7eb3',
+    temaRengi: '#1f2430',
+  },
 ];
 
 // Oyunun bilgisi (bilinmiyorsa undefined)
@@ -147,6 +158,9 @@ export function oyunId(durum) {
 
 // Yeni odanın lobisi. Varsayılan UNO.
 export function yeniOda(sahipId, sahipAd, oyun = 'uno') {
+  if (oyun === 'cizbil') {
+    return cizbil.yeniOda(sahipId, sahipAd);
+  }
   if (oyun === 'tanis') {
     return tanis.yeniOda(sahipId, sahipAd);
   }
@@ -174,6 +188,9 @@ export function yeniOda(sahipId, sahipAd, oyun = 'uno') {
 // Aynı oyuncularla (id, ad, sıra) ve aynı ev sahibiyle seçilen oyunun taze lobisi.
 function lobiyiDegistir(durum, oyun) {
   const oyuncular = durum.oyuncular.map((o) => ({ id: o.id, ad: o.ad }));
+  if (oyun === 'cizbil') {
+    return cizbil.lobiKur(oyuncular, durum.sahip);
+  }
   if (oyun === 'tanis') {
     return tanis.lobiKur(oyuncular, durum.sahip);
   }
@@ -221,6 +238,7 @@ function lobiyiDegistir(durum, oyun) {
 // ---------------------------------------------------------------------------
 
 const MOTORLAR = { uno, tanis, kelime, aynikafa, gizliyol, gorev, element, kule };
+MOTORLAR.cizbil = cizbil;
 
 // Eski odada genel skor yoktur: boş bir tane gibi davranırız.
 export function genelVeri(durum) {
@@ -319,6 +337,7 @@ function oyunSec(durum, eylem) {
 // kelimeListesi: yalnız "Kelime düellosu" için { cevaplar, gecerli } (testler küçük bir liste verir).
 // ipuclari: yalnız "Aynı Kafa" için ipucu dizisi (testler küçük bir liste verir).
 // gorevler, simdi: "Gizli Görev" için görev listesi; simdi (şimdiki zaman, ms) "Risk Kulesi" için de kullanılır; testler sabitler.
+// "Çiz Bil" de simdi'yi kullanır (kelime bankası motorun içindedir).
 export function uygula(durum, eylem, rastgele, banka, kelimeListesi, ipuclari, gorevler, simdi) {
   const sonuc = motoruCalistir(durum, eylem, rastgele, banka, kelimeListesi, ipuclari, gorevler, simdi);
   if (sonuc.ok && sonuc.durum) {
@@ -341,6 +360,9 @@ function motoruCalistir(
     return oyunSec(durum, eylem);
   }
   const oyun = oyunId(durum);
+  if (oyun === 'cizbil') {
+    return cizbil.uygula(durum, eylem, rastgele, simdi);
+  }
   if (oyun === 'tanis') {
     return tanis.uygula(durum, eylem, rastgele, banka);
   }
