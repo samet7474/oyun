@@ -833,7 +833,7 @@ function kimlikler(d) {
 test('yönlendirici: oyun listesi Taş Kağıt Makas içerir, oda kurulabilir', () => {
   assert.deepEqual(
     OYUNLAR.map((o) => o.id),
-    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule']
+    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule', 'pazar']
   );
   assert.equal(OYUNLAR.find((o) => o.id === 'element').ad, 'Taş Kağıt Makas');
   const d = yonlendirYeniOda(pid(0), 'Ali', 'element');

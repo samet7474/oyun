@@ -4,6 +4,7 @@
 // "Kelime düellosu" ekranları kelime-ekran.js'te, "Aynı Kafa" ekranları aynikafa-ekran.js'te,
 // "Gizli Yol" ekranları gizliyol-ekran.js'te, "Gizli Görev" ekranları gorev-ekran.js'te,
 // "Taş Kağıt Makas" ekranları element-ekran.js'te, "Risk Kulesi" ekranları kule-ekran.js'te.
+// "Pazar" ekranları pazar-ekran.js'te, kuralları pazar.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import {
@@ -26,6 +27,7 @@ import { gizliyolEkraniKur } from './gizliyol-ekran.js';
 import { gorevEkraniKur } from './gorev-ekran.js';
 import { elementEkraniKur } from './element-ekran.js';
 import { kuleEkraniKur } from './kule-ekran.js';
+import { pazarEkraniKur } from './pazar-ekran.js';
 import { bekleyenSoruVarMi } from './gorev.js';
 import {
   yeniOda,
@@ -191,6 +193,18 @@ const elementEkran = elementEkraniKur({
 
 // "Risk Kulesi" ekranları
 const kuleEkran = kuleEkraniKur({
+  el: el,
+  istemci: istemci,
+  hamle: hamle,
+  mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
+  render: render,
+  benimIndeks: benimIndeks,
+  ustCubuk: ustCubuk,
+});
+
+// "Pazar" ekranları
+const pazarEkran = pazarEkraniKur({
   el: el,
   istemci: istemci,
   hamle: hamle,
@@ -439,6 +453,7 @@ function odaBaglan(kod, satir) {
   gorevEkran.sifirla();
   elementEkran.sifirla();
   kuleEkran.sifirla();
+  pazarEkran.sifirla();
   try {
     history.replaceState(null, '', '#' + kod);
   } catch (hata) {
@@ -599,6 +614,7 @@ async function odadanCik() {
   gorevEkran.sifirla();
   elementEkran.sifirla();
   kuleEkran.sifirla();
+  pazarEkran.sifirla();
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch (hata) {
@@ -693,6 +709,9 @@ function benimSiramMi(d) {
   }
   if (d.oyun === 'kule') {
     return d.asama === 'oyun' && d.sira === idx; // zar atma sırası bende
+  }
+  if (d.oyun === 'pazar') {
+    return d.asama === 'oyun' && d.sira === idx; // alma ya da satma sırası bende
   }
   return d.asama === 'oyun' && d.sira === idx;
 }
@@ -1067,7 +1086,7 @@ function ustCubuk() {
           {
             class: 'link-dugme',
             onclick: () => {
-              if (d.asama === 'bitti' && ['tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule'].includes(d.oyun)) {
+              if (d.asama === 'bitti' && ['tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule', 'pazar'].includes(d.oyun)) {
                 hamle({ tip: 'yeniOyun' });
                 return;
               }
@@ -1357,6 +1376,9 @@ function oyunBolumu(d, sahipMi) {
   }
   if (oyun === 'kule') {
     return kuleEkran.lobiBolumu(d, sahipMi);
+  }
+  if (oyun === 'pazar') {
+    return pazarEkran.lobiBolumu(d, sahipMi);
   }
   return unoLobiBolumu(d, sahipMi);
 }
@@ -1762,7 +1784,7 @@ for (const oyun of OYUNLAR) {
 function temaUygula(d) {
   const oyun = istemci.kod && d ? oyunId(d) : 'uno';
   const sayfaKoku = document.documentElement;
-  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa' || oyun === 'gizliyol' || oyun === 'gorev' || oyun === 'element' || oyun === 'kule') {
+  if (oyun === 'tanis' || oyun === 'kelime' || oyun === 'aynikafa' || oyun === 'gizliyol' || oyun === 'gorev' || oyun === 'element' || oyun === 'kule' || oyun === 'pazar') {
     sayfaKoku.setAttribute('data-tema', oyun);
   } else {
     sayfaKoku.removeAttribute('data-tema');
@@ -1864,6 +1886,11 @@ function render() {
 
   if (oyunId(d) === 'kule') {
     kok.append(...kuleEkran.sayfa(d, ben));
+    return;
+  }
+
+  if (oyunId(d) === 'pazar') {
+    kok.append(...pazarEkran.sayfa(d, ben));
     return;
   }
 

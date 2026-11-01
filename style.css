@@ -116,6 +116,19 @@
   --kotu: #ff8a7a;
 }
 
+/* "Pazar" odasında koyu zeytin yeşili tezgâh, taze yeşil vurgu */
+:root[data-tema='pazar'] {
+  --bg: #1d2a14;
+  --bg-ust: #3d5422;
+  --panel: rgba(8, 14, 4, 0.4);
+  --panel-acik: rgba(190, 240, 140, 0.1);
+  --yazi: #f6fbe9;
+  --yazi-soluk: #c0d3a2;
+  --vurgu: #9be15d;
+  --iyi: #8ee88a;
+  --kotu: #ff8a7a;
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -4529,4 +4542,362 @@ button {
 
 .gy-sayfa {
   gap: 8px;
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Pazar                                                               */
+/* ------------------------------------------------------------------ */
+
+.pz-sayfa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 16px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.pz-sayfa h2 {
+  margin: 0;
+}
+
+/* Oyuncular: puan ve açık el */
+.pz-oyuncular {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pz-oyuncu {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 2px solid transparent;
+}
+
+.pz-oyuncu.sirada {
+  border-color: var(--vurgu);
+  background: var(--panel-acik);
+}
+
+.pz-oyuncu.ben .ad {
+  color: var(--vurgu);
+}
+
+.pz-oyuncu.kazanan {
+  border-color: var(--vurgu);
+}
+
+.pz-oyuncu-ust,
+.pz-oyuncu-alt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pz-oyuncu-ust .ad {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.pz-oyuncu-ust .puan {
+  margin-left: auto;
+  font-weight: 900;
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.pz-oyuncu-alt {
+  justify-content: space-between;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.pz-sira-etiketi {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--vurgu);
+  color: #17220d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pz-sira {
+  text-align: center;
+  font-weight: 800;
+  color: var(--yazi-soluk);
+}
+
+.pz-sira.benim {
+  color: var(--vurgu);
+  font-size: 18px;
+}
+
+.pz-son-tur {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 176, 46, 0.18);
+  border: 2px solid #ffb02e;
+  font-size: 15px;
+}
+
+/* Fiyat tahtası: beş sütun */
+.pz-tahta {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pz-meyve {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 2px solid transparent;
+  text-align: center;
+}
+
+.pz-meyve.dustu {
+  border-color: var(--kotu);
+}
+
+.pz-meyve.artti .pz-fiyat small {
+  color: var(--iyi);
+}
+
+.pz-meyve.dustu .pz-fiyat small {
+  color: var(--kotu);
+}
+
+.pz-simge {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.pz-meyve-ad {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+}
+
+.pz-fiyat {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.pz-fiyat small {
+  margin-left: 1px;
+  font-size: 12px;
+  vertical-align: top;
+}
+
+.pz-noktalar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  max-width: 56px;
+}
+
+.pz-nokta {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.pz-nokta.dolu {
+  background: var(--vurgu);
+}
+
+.pz-elde {
+  font-size: 11px;
+  color: var(--yazi-soluk);
+}
+
+.pz-elde.var {
+  color: var(--yazi);
+  font-weight: 800;
+}
+
+/* Tezgâh */
+.pz-tezgah-kutu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pz-baslik {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pz-baslik .soluk-yazi {
+  font-size: 13px;
+  margin: 0;
+}
+
+.pz-tezgah {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pz-kart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 78px;
+  padding: 6px 2px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: linear-gradient(180deg, #fffbea, #eadfb8);
+  color: #2a2410;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pz-kart:not(:disabled):active {
+  transform: scale(0.95);
+}
+
+.pz-kart:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.pz-kart.bos {
+  background: transparent;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+.pz-kart-simge {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.pz-kart-ad {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pz-ipucu {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Satış */
+.pz-satis-kutu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pz-satis-kutu .soluk-yazi {
+  margin: 0;
+}
+
+.pz-satis {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.pz-satis-meyve {
+  font-weight: 800;
+}
+
+.pz-adet {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pz-adet .mini-dugme {
+  min-width: 36px;
+  font-size: 18px;
+  color: var(--yazi);
+}
+
+.pz-adet-sayi {
+  min-width: 18px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.dugme.pz-sat {
+  min-height: 44px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.pz-satis-not {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--yazi-soluk);
+}
+
+.pz-haberler ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pz-nasil {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.pz-nasil summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.pz-nasil ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--yazi-soluk);
+}
+
+/* Oyun sonu */
+.pz-kazanan {
+  text-align: center;
+  padding: 18px 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(155, 225, 93, 0.25), rgba(8, 14, 4, 0.4));
+  border: 2px solid var(--vurgu);
+}
+
+.pz-kazanan .ad {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--vurgu);
+  overflow-wrap: anywhere;
+}
+
+.pz-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }

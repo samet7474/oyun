@@ -12,6 +12,7 @@ import * as gizliyol from './gizliyol.js';
 import * as gorev from './gorev.js';
 import * as element from './element.js';
 import * as kule from './kule.js';
+import * as pazar from './pazar.js';
 
 // Her oyunun bilgisi tek yerden gelir (lobideki oyun kartları bunu kullanır).
 //   enAz, enCok : kaç kişiyle oynanır
@@ -106,6 +107,16 @@ export const OYUNLAR = [
     renk: '#ffb454',
     temaRengi: '#3a1410',
   },
+  {
+    id: 'pazar',
+    ad: 'Pazar',
+    enAz: 2,
+    enCok: 4,
+    aciklama: 'Meyve topla, fiyatı düşmeden sat.',
+    simge: '🍉',
+    renk: '#9be15d',
+    temaRengi: '#1d2a14',
+  },
 ];
 
 // Oyunun bilgisi (bilinmiyorsa undefined)
@@ -168,6 +179,9 @@ export function yeniOda(sahipId, sahipAd, oyun = 'uno') {
   if (oyun === 'kule') {
     return kule.yeniOda(sahipId, sahipAd);
   }
+  if (oyun === 'pazar') {
+    return pazar.yeniOda(sahipId, sahipAd);
+  }
   return uno.yeniOda(sahipId, sahipAd);
 }
 
@@ -195,6 +209,9 @@ function lobiyiDegistir(durum, oyun) {
   if (oyun === 'kule') {
     return kule.lobiKur(oyuncular, durum.sahip);
   }
+  if (oyun === 'pazar') {
+    return pazar.lobiKur(oyuncular, durum.sahip);
+  }
   const ilk = oyuncular[0];
   let yeni = uno.yeniOda(ilk.id, ilk.ad);
   for (let i = 1; i < oyuncular.length; i++) {
@@ -221,6 +238,7 @@ function lobiyiDegistir(durum, oyun) {
 // ---------------------------------------------------------------------------
 
 const MOTORLAR = { uno, tanis, kelime, aynikafa, gizliyol, gorev, element, kule };
+MOTORLAR.pazar = pazar;
 
 // Eski odada genel skor yoktur: boş bir tane gibi davranırız.
 export function genelVeri(durum) {
@@ -361,6 +379,9 @@ function motoruCalistir(
   }
   if (oyun === 'kule') {
     return kule.uygula(durum, eylem, rastgele, simdi);
+  }
+  if (oyun === 'pazar') {
+    return pazar.uygula(durum, eylem, rastgele);
   }
   if (oyun === 'uno') {
     return uno.uygula(durum, eylem, rastgele);

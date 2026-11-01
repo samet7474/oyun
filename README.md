@@ -15,6 +15,7 @@ GitHub Pages'te çalışır, derleme gerekmez.
 | **Gizli Görev** | 2-4 | Gizli görevini fark ettirmeden yap. |
 | **Taş Kağıt Makas** | 2 | Taş, kağıt, makas: kartını gizlice seç. |
 | **Risk Kulesi** | 2-4 | Zar at, kuleni yükselt, yıkılmadan dur. |
+| **Pazar** | 2-4 | Meyve topla, fiyatı düşmeden sat. |
 
 Oyunların bilgileri (ad, kişi sayısı, açıklama, simge, renk) `oyunlar.js` içindeki `OYUNLAR` listesindedir; lobideki oyun kartları oradan çizilir.
 
@@ -166,6 +167,23 @@ sırayla taş, kağıt, makas olarak okunur.)
 - Ekranda ortada yükselen kule (CSS blokları), yuvarlanan zar (inline SVG), kasalar ve hedefe ilerleme çubukları, turdaki toplam, oyun içi en yüksek kule rekoru ve "Nasıl oynanır" kutusu vardır.
   Oyun sonunda kazanan, en yüksek kule ve en çok yıkılan görünür. Gizli bilgi yoktur: başkasının turunu herkes canlı izler.
 
+### Pazar
+İki ile dört kişi, sırayla oynanan meyve ticareti oyunu. Sitenin en çok düşündüren oyunu: ne zaman satacağını iyi seçmek gerekir.
+- **Meyveler ve fiyatlar:** 🍎 Elma 3, 🍌 Muz 4, 🍇 Üzüm 5, 🍓 Çilek 6, 🍉 Karpuz 7. Az bulunan meyve pahalıdır (normal destede 10 elma, 6 karpuz var).
+  Başlangıç fiyatı aynı zamanda o meyvenin en yüksek fiyatıdır.
+- **Başlangıç:** herkese desteden 2 kart gelir, ortadaki tezgâhta 5 açık kart durur. Herkesin eli açıktır, gizli bilgi yoktur.
+- **Hamle:** sırası gelen tek bir şey yapar:
+  - **Al:** tezgâhtan bir kart alır. Tezgâh desteden tamamlanır. Elde en fazla 6 kart olur (dolu elle önce satmak gerekir).
+  - **Sat:** aynı meyveden en az 2 kartı satar (hepsini ya da bir kısmını). Kazanç = adet x o meyvenin şu anki fiyatı.
+    Sonra o meyvenin fiyatı satılan adet kadar düşer (en az 1). Diğer bütün meyvelerin fiyatı 1 artar, başlangıç fiyatını geçmez.
+  - **Pas:** yalnız hiçbir hamle yapılamıyorsa (tezgâh boş ve satacak çift yok).
+- **Oyun sonu:** deste bitince son tur başlar ve sıra oyunu başlatana dönünce oyun biter; böylece herkes eşit sayıda hamle yapar.
+  Elde kalan kartlar çürür, puan getirmez.
+- **Kazanan:** en çok puanı olan. Eşitlikte daha çok kart satan kazanır; o da eşitse berabere ("Kim önde"de berabere sayılır).
+- Ayarlar (ev sahibi): oyun uzunluğu **Kısa** (30 kart) ya da **Normal** (40 kart). Tekrar oynamada başlayan kişi bir kayar.
+- Ekranda oyuncuların puanı ve eli, fiyat tahtası (son satışta düşen ve artan fiyatlar işaretli), tezgâh, satış satırları
+  (adet seçimi, kazanç ve satıştan sonraki fiyat), son olanlar ve "Nasıl oynanır" kutusu vardır. Oyun sonunda sıralama, çürüyen kartlar ve en kârlı satış görünür.
+
 Aynı tarayıcıdan aynı linke dönersen koltuğuna otursun diye kimliğin tarayıcıda saklanır.
 
 ## Testleri çalıştırma
@@ -178,6 +196,7 @@ node test/gizliyol-test.js
 node test/gorev-test.js
 node test/element-test.js
 node test/kule-test.js
+node test/pazar-test.js
 node test/genel-test.js
 ```
 Hepsini bir arada: `for t in test/*.js; do node $t; done`
@@ -190,6 +209,7 @@ kendi küçük kelime listesini kullanır.
 `gorev-test.js` "Gizli Görev" motorunu (dağıtım, onay ve çoğunluk, yakalama, değiştirme hakkı, hedef puan ve süre bitişi, gizlilik yardımcıları) ve yönlendiriciyi sınar.
 `element-test.js` "Taş Kağıt Makas" motorunu (deste, dağıtım, yenme döngüsü, eski ateş/su/toprak anahtarlarının eşlenmesi, özel kartlar ve kombinasyonları, geçersiz seçimler, el tamamlama, hedef puan ve eller boşalınca bitiş, gizlilik yardımcısı) ve yönlendiriciyi sınar.
 `kule-test.js` "Risk Kulesi" motorunu (zar ekleme, 1'de yıkılma, çift kat, dur ve kasa, çatlak taş kuralları, hedefe ulaşma, sıra döngüsü, oyuncu ayrılınca sıra, sırayı geç) ve yönlendiriciyi sınar.
+`pazar-test.js` "Pazar" motorunu (deste ve dağıtım, alma ve el sınırı, satış puanı, fiyat düşüşü ve toparlanma, geçersiz hamleler, pas, son tur ve eşit hamle, kazanan, beraberlik, 2-3-4 kişilik tam oyunlar) ve yönlendiriciyi sınar.
 Hata varsa çıkış kodu 1 olur.
 
 ## Dosyalar
@@ -203,6 +223,7 @@ Hata varsa çıkış kodu 1 olur.
 - `gorev-ekran.js`: "Gizli Görev" ekranları (lobi ayarları, görev kartları, onay ve yakalama soruları, puan tablosu, geri sayım, sonuç)
 - `element-ekran.js`: "Taş Kağıt Makas" ekranları (lobi ayarları, kartlar, masa ve açılış animasyonu, el şeridi, oynananlar şeridi, döngü şeması, sonuç)
 - `kule-ekran.js`: "Risk Kulesi" ekranları (lobi ayarları, kasalar, kule ve zar animasyonu, çatlak taş paneli ve uyarısı, sırayı geç, sonuç)
+- `pazar-ekran.js`: "Pazar" ekranları (lobi ayarları, oyuncular ve açık eller, fiyat tahtası, tezgâh, satış, son tur uyarısı, sonuç)
 - `oyunlar.js`: oyun yönlendirici; oyun bilgileri (`OYUNLAR`), hareketi `durum.oyun`'a göre doğru motora verme, oyun seçimi (`oyunSec`) ve "Kim önde" genel skoru (`genelGuncelle`)
 - `onay.js`: sitenin kendi onay penceresi (`onayIste`)
 - `ses.js`: WebAudio ile kısa sesler, ses aç/kapa tercihi ve güvenli titreşim (`titret`)
@@ -213,6 +234,7 @@ Hata varsa çıkış kodu 1 olur.
 - `gorev-gorevler.js`: Gizli Görev görev bankası
 - `element.js`: Taş Kağıt Makas kuralları (saf motor, DOM ve ağ yok)
 - `kule.js`: Risk Kulesi kuralları (saf motor, DOM ve ağ yok)
+- `pazar.js`: Pazar kuralları (saf motor, DOM ve ağ yok)
 - `kelime.js`: "Kelime düellosu" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa.js`: "Aynı Kafa" kuralları (saf motor, DOM ve ağ yok)
 - `aynikafa-ipuclari.js`: "Aynı Kafa" ipucu bankası
@@ -227,6 +249,7 @@ Hata varsa çıkış kodu 1 olur.
 - `test/gorev-test.js`: Gizli Görev motoru ve yönlendirici testleri
 - `test/element-test.js`: Taş Kağıt Makas motoru ve yönlendirici testleri
 - `test/kule-test.js`: Risk Kulesi motoru ve yönlendirici testleri
+- `test/pazar-test.js`: Pazar motoru ve yönlendirici testleri
 - `test/genel-test.js`: oyun bilgileri, Kim önde genel skoru ve sürüm listesi testleri
 - `package.json`: node'un `.js` dosyalarını modül olarak okuması için
 

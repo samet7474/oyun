@@ -52,10 +52,10 @@ function gorevBitir(d, puanlar) {
 // Oyun bilgileri
 // ---------------------------------------------------------------------------
 
-test('oyun listesi: 8 oyun, hepsinde kişi sayısı, açıklama, simge ve renk var', () => {
+test('oyun listesi: 9 oyun, hepsinde kişi sayısı, açıklama, simge ve renk var', () => {
   assert.deepEqual(
     OYUNLAR.map((o) => o.id),
-    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule']
+    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule', 'pazar']
   );
   for (const oyun of OYUNLAR) {
     assert.ok(oyun.ad.length > 0, oyun.id);
