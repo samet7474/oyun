@@ -918,7 +918,7 @@ function kimlikler(d) {
 test('yönlendirici: oyun listesi Gizli Yol içerir, oda kurulabilir', () => {
   assert.deepEqual(
     OYUNLAR.map((o) => o.id),
-    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule', 'pazar']
+    ['uno', 'tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule', 'pazar', 'cizbil']
   );
   assert.equal(OYUNLAR.find((o) => o.id === 'gizliyol').ad, 'Gizli Yol');
   const d = yonlendirYeniOda(pid(0), 'Ali', 'gizliyol');

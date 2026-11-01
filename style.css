@@ -4901,3 +4901,366 @@ button {
   flex-direction: column;
   gap: 10px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Çiz Bil: grafit masa, beyaz kâğıt tahta, pembe keçeli kalem vurgu   */
+/* ------------------------------------------------------------------ */
+
+:root[data-tema='cizbil'] {
+  --bg: #1f2430;
+  --bg-ust: #3a3550;
+  --panel: rgba(0, 0, 0, 0.28);
+  --panel-acik: rgba(255, 255, 255, 0.09);
+  --yazi: #f5f2fa;
+  --yazi-soluk: #b6b2c8;
+  --vurgu: #ff7eb3;
+  --iyi: #6fe0a0;
+  --kotu: #ff7a7a;
+}
+
+.cb-sayfa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 16px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.cb-sayfa.sonuc {
+  gap: 14px;
+}
+
+.cb-ust {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--yazi-soluk);
+}
+
+.cb-sure {
+  min-width: 64px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--yazi);
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.cb-sure.az {
+  background: var(--kotu);
+  color: #330000;
+}
+
+.cb-oyuncular {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cb-oyuncu {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 14px;
+  border: 2px solid transparent;
+}
+
+.cb-oyuncu .ad {
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cb-oyuncu .puan {
+  font-weight: 800;
+  color: var(--vurgu);
+}
+
+.cb-oyuncu.cizen {
+  border-color: var(--vurgu);
+}
+
+.cb-oyuncu.bildi {
+  border-color: var(--iyi);
+}
+
+.cb-oyuncu.bildi .isaret {
+  color: var(--iyi);
+  font-weight: 900;
+}
+
+.cb-kelime {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-height: 34px;
+  text-align: center;
+}
+
+.cb-kelime b {
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--vurgu);
+}
+
+.cb-kalip {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+}
+
+.cb-kalip .kelime-kalibi {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.cb-kalip .harf-sayisi {
+  font-size: 13px;
+  color: var(--yazi-soluk);
+}
+
+/* Kare tahta: telefonda ekran genişliği, yüksek ekranda taşmasın */
+.cb-tuval-kutusu {
+  width: min(100%, 58vh);
+  width: min(100%, 58svh);
+  aspect-ratio: 1 / 1;
+  align-self: center;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.cb-tuval {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.cb-sayfa.ciziyor .cb-tuval {
+  cursor: crosshair;
+}
+
+.cb-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cb-araclar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cb-arac-satiri {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cb-arac-satiri .bosluk {
+  flex: 1;
+}
+
+.cb-renk {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  background: var(--renk);
+  cursor: pointer;
+  padding: 0;
+}
+
+.cb-renk[aria-pressed='true'] {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px var(--vurgu);
+}
+
+.cb-arac {
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: var(--panel-acik);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cb-arac[aria-pressed='true'] {
+  border-color: var(--vurgu);
+  background: rgba(255, 126, 179, 0.18);
+}
+
+.cb-arac.tehlikeli {
+  color: var(--kotu);
+}
+
+.cb-tahmin {
+  display: flex;
+  gap: 8px;
+}
+
+.cb-girdi {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--yazi);
+  font: inherit;
+  font-size: 18px;
+}
+
+.cb-girdi:focus {
+  outline: none;
+  border-color: var(--vurgu);
+}
+
+.cb-mesaj {
+  min-height: 1.35em;
+  text-align: center;
+  font-size: 15px;
+  color: var(--yazi-soluk);
+}
+
+.cb-mesaj.uyari {
+  color: var(--kotu);
+}
+
+.cb-mesaj.yakin {
+  color: var(--vurgu);
+  font-weight: 800;
+}
+
+.cb-bildin {
+  text-align: center;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.cb-bildin .baslik {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.cb-bildin .baslik.iyi {
+  color: var(--iyi);
+}
+
+.cb-akis {
+  margin: 0;
+  padding: 8px 12px;
+  list-style: none;
+  border-radius: 14px;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.cb-akis .bildi {
+  color: var(--iyi);
+  font-weight: 800;
+}
+
+.cb-akis .bos {
+  color: var(--yazi-soluk);
+}
+
+.cb-secim,
+.cb-bekle {
+  text-align: center;
+}
+
+.cb-secenekler {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cb-cevap {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cb-cevap-yazi {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--vurgu);
+  overflow-wrap: anywhere;
+}
+
+.puan-satiri.cizen .ad {
+  color: var(--yazi-soluk);
+}
+
+.cb-alt-dugmeler {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cb-nasil {
+  padding: 10px 14px;
+  gap: 0;
+}
+
+.cb-nasil summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.cb-nasil ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--yazi-soluk);
+}
+
+.cb-ozet-listesi {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cb-ozet .kelime {
+  font-weight: 800;
+}

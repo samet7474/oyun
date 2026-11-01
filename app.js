@@ -5,6 +5,7 @@
 // "Gizli Yol" ekranları gizliyol-ekran.js'te, "Gizli Görev" ekranları gorev-ekran.js'te,
 // "Taş Kağıt Makas" ekranları element-ekran.js'te, "Risk Kulesi" ekranları kule-ekran.js'te.
 // "Pazar" ekranları pazar-ekran.js'te, kuralları pazar.js'te.
+// "Çiz Bil" ekranları ve canlı çizim (Realtime broadcast) cizbil-ekran.js'te.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import {
@@ -20,6 +21,7 @@ import {
 } from './oyunlar.js';
 import { onayIste } from './onay.js';
 import { sesAcikMi, sesDegistir, sesCal, titret } from './ses.js';
+import { cizbilEkraniKur } from './cizbil-ekran.js';
 import { tanisEkraniKur } from './tanis-ekran.js';
 import { kelimeEkraniKur } from './kelime-ekran.js';
 import { aynikafaEkraniKur } from './aynikafa-ekran.js';
@@ -116,6 +118,19 @@ const istemci = {
   gorulenEl: new Set(), // yeni gelen kartları animasyonlamak için
   sonAtikId: null,
 };
+
+// "Çiz Bil" ekranları. Canlı çizim kendi broadcast kanalını kurar, bu yüzden db de verilir.
+const cizbilEkran = cizbilEkraniKur({
+  el: el,
+  istemci: istemci,
+  db: db,
+  hamle: hamle,
+  mesajGoster: mesajGoster,
+  bekleyenUyari: bekleyenUyari,
+  render: render,
+  benimIndeks: benimIndeks,
+  ustCubuk: ustCubuk,
+});
 
 // "Beni ne kadar tanıyorsun" ekranları. Ortak yardımcıları ona veriyoruz.
 const tanisEkran = tanisEkraniKur({
@@ -446,6 +461,7 @@ function odaBaglan(kod, satir) {
   istemci.modal = null;
   istemci.gorulenEl = new Set();
   istemci.sonAtikId = null;
+  cizbilEkran.sifirla();
   tanisEkran.sifirla();
   kelimeEkran.sifirla();
   aynikafaEkran.sifirla();
@@ -607,6 +623,7 @@ async function odadanCik() {
   istemci.modal = null;
   istemci.onKod = '';
   document.title = BASLIK;
+  cizbilEkran.sifirla();
   tanisEkran.sifirla();
   kelimeEkran.sifirla();
   aynikafaEkran.sifirla();
@@ -688,6 +705,9 @@ function benimSiramMi(d) {
   const idx = oyuncuIndeks(d, istemci.oyuncuId);
   if (idx < 0) {
     return false;
+  }
+  if (d.oyun === 'cizbil') {
+    return d.asama === 'secim' && d.cizen === idx; // kelime seçip çizme sırası bende
   }
   if (d.oyun === 'tanis') {
     return d.asama === 'cevap' && !d.cevaplar[d.tur][idx];
@@ -1086,6 +1106,10 @@ function ustCubuk() {
           {
             class: 'link-dugme',
             onclick: () => {
+              if (d.asama === 'bitti' && d.oyun === 'cizbil') {
+                hamle({ tip: 'yeniOyun' });
+                return;
+              }
               if (d.asama === 'bitti' && ['tanis', 'kelime', 'aynikafa', 'gizliyol', 'gorev', 'element', 'kule', 'pazar'].includes(d.oyun)) {
                 hamle({ tip: 'yeniOyun' });
                 return;
@@ -1356,6 +1380,9 @@ function unoLobiBolumu(d, sahipMi) {
 // Seçili oyunun lobi bölümü (ayarlar ve başlat düğmesi)
 function oyunBolumu(d, sahipMi) {
   const oyun = oyunId(d);
+  if (oyun === 'cizbil') {
+    return cizbilEkran.lobiBolumu(d, sahipMi);
+  }
   if (oyun === 'tanis') {
     return tanisEkran.lobiBolumu(d, sahipMi);
   }
@@ -1789,6 +1816,9 @@ function temaUygula(d) {
   } else {
     sayfaKoku.removeAttribute('data-tema');
   }
+  if (oyun === 'cizbil') {
+    sayfaKoku.setAttribute('data-tema', 'cizbil');
+  }
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
     meta.setAttribute('content', TEMA_RENKLERI[oyun] || TEMA_RENKLERI.uno);
@@ -1802,6 +1832,11 @@ function render() {
   // Kendi sorumu yazarken gelen güncelleme yazı kutusunu bozmasın
   if (istemci.kod && ben >= 0 && tanisEkran.yazimSurerken(d)) {
     tanisEkran.ozelEsitle();
+    return;
+  }
+
+  // "Çiz Bil"de çizim sürerken gelen güncelleme tuvali ve tahmin kutusunu yeniden kurmasın
+  if (istemci.kod && ben >= 0 && cizbilEkran.yerindeGuncelle(d, ben)) {
     return;
   }
 
@@ -1851,6 +1886,11 @@ function render() {
   if (d.asama === 'lobi') {
     kok.append(ustCubuk(), lobiEkrani());
     tanisEkran.ozelEsitle();
+    return;
+  }
+
+  if (oyunId(d) === 'cizbil') {
+    kok.append(...cizbilEkran.sayfa(d, ben));
     return;
   }
 
