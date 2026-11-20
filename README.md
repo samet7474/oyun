@@ -20,6 +20,16 @@ GitHub Pages'te çalışır, derleme gerekmez.
 
 Oyunların bilgileri (ad, kişi sayısı, açıklama, simge, renk) `oyunlar.js` içindeki `OYUNLAR` listesindedir; lobideki oyun kartları oradan çizilir.
 
+## Sesli Oda (`sesli.html`)
+Oyun oynarken iki kişinin arkadan konuşması için ayrı sayfa: https://samet7474.github.io/oyun/sesli.html
+- Biri "Yeni oda kur" der, 4 harfli kodu ya da `?oda=KOD` bağlantısını gönderir; diğeri kodla katılır. Üçüncü kişiye "oda dolu" denir.
+- Ses iki tarayıcı arasında doğrudan gider (WebRTC, yalnız STUN; aracı TURN sunucusu yok). Supabase Realtime kanalı `sesli-<KOD>`
+  yalnız tanışma (presence) ve teklif/cevap/aday mesajları için kullanılır, veritabanına bir şey yazılmaz.
+- Kimliği küçük olan taraf teklifi yapar; cevap 5 sn'de gelmezse teklif yeniden yollanır, bağlantı koparsa ICE yeniden başlatılır.
+- Ekranda: mikrofonu kapat/aç, iki konuşma ışığı, karşı tarafın ses sürgüsü. Yankı/gürültü engelleme açık. Ad tarayıcıda saklanır.
+- Modül sistemine (`DOSYALAR`, `SURUM`) bağlı değildir; tek dosya, yalnız `config.js`'i içe alır.
+- Sınır: mobil internet ya da katı ağlarda doğrudan bağlantı kurulamayabilir ("Doğrudan bağlantı kurulamadı"). Gerekirse TURN eklenir.
+
 ## Ortak özellikler
 - **Oyun seçici:** lobide her oyun bir kart (simge, ad, kişi sayısı, tek cümlelik açıklama). Seçili oyun belirgindir.
   Ev sahibi dışındakiler seçimi görür ama değiştiremez. Odadaki kişi sayısı oyuna uymuyorsa kart soluk olur ve nedeni yazar ("2 kişiliktir").
