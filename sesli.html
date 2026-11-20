@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#101826">
+    <title>Sesli Oda</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='36' y='10' width='28' height='50' rx='14' fill='%2346d36b'/%3E%3Cpath d='M24 46a26 26 0 0 0 52 0' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E%3Cpath d='M50 72v16' stroke='white' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
+    <!--
+      Sesli Oda: iki kişi oyun oynarken arkadan konuşsun diye.
+      Ses iki tarayıcı arasında doğrudan gider (WebRTC). Supabase Realtime kanalı
+      yalnız başta iki tarafın birbirini bulması için kullanılır ("sesli-<KOD>").
+      Bu sayfa oyun sitesinin modül sistemine (index.html, DOSYALAR, SURUM) bağlı değildir.
+    -->
+    <style>
+      :root {
+        --bg: #101826;
+        --bg-ust: #1a2a40;
+        --panel: rgba(255, 255, 255, 0.06);
+        --cizgi: rgba(255, 255, 255, 0.12);
+        --yazi: #f2f5fa;
+        --soluk: #9fb0c8;
+        --vurgu: #46d36b;
+        --kotu: #ff5d5d;
+        --sari: #ffd23f;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        background: radial-gradient(circle at 50% 0%, var(--bg-ust), var(--bg) 70%) fixed, var(--bg);
+        color: var(--yazi);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        display: flex;
+        justify-content: center;
+        padding: 24px 16px 40px;
+      }
+      main { width: 100%; max-width: 420px; }
+      h1 { font-size: 22px; margin: 0 0 4px; }
+      .alt { color: var(--soluk); font-size: 14px; margin: 0 0 22px; line-height: 1.45; }
+      .kart {
+        background: var(--panel);
+        border: 1px solid var(--cizgi);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+      label { display: block; font-size: 13px; color: var(--soluk); margin-bottom: 6px; }
+      input[type='text'] {
+        width: 100%;
+        font: inherit;
+        font-size: 17px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--cizgi);
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--yazi);
+        outline: none;
+      }
+      input[type='text']:focus { border-color: var(--vurgu); }
+      #kod-girdi { text-transform: uppercase; letter-spacing: 6px; text-align: center; font-weight: 700; }
+      button {
+        font: inherit;
+        font-size: 16px;
+        font-weight: 600;
+        width: 100%;
+        padding: 13px 14px;
+        border-radius: 12px;
+        border: 0;
+        cursor: pointer;
+        background: var(--vurgu);
+        color: #0b1a10;
+      }
+      button.ikincil { background: rgba(255, 255, 255, 0.1); color: var(--yazi); }
+      button.tehlike { background: transparent; color: var(--kotu); border: 1px solid rgba(255, 93, 93, 0.4); }
+      button:disabled { opacity: 0.5; cursor: default; }
+      .satir { display: flex; gap: 10px; }
+      .satir > * { flex: 1; }
+      .ayrac { text-align: center; color: var(--soluk); font-size: 13px; margin: 12px 0; }
+      .gizli { display: none !important; }
+
+      .oda-kodu { text-align: center; }
+      .oda-kodu .kod { font-size: 40px; font-weight: 800; letter-spacing: 10px; margin: 2px 0 10px; }
+      .durum { text-align: center; font-size: 15px; margin: 4px 0 0; color: var(--soluk); min-height: 22px; }
+      .durum.iyi { color: var(--vurgu); }
+      .durum.kotu { color: var(--kotu); }
+
+      .kisi { display: flex; align-items: center; gap: 14px; padding: 6px 0; }
+      .kisi + .kisi { border-top: 1px solid var(--cizgi); padding-top: 14px; margin-top: 8px; }
+      .isik {
+        width: 46px; height: 46px; border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        display: grid; place-items: center; font-size: 20px; flex: none;
+        transition: box-shadow 0.12s, background 0.12s;
+      }
+      .isik.konusuyor { background: rgba(70, 211, 107, 0.25); box-shadow: 0 0 0 4px rgba(70, 211, 107, 0.55); }
+      .isik.sessiz { background: rgba(255, 93, 93, 0.18); }
+      .kisi .ad { font-weight: 700; }
+      .kisi .not { font-size: 13px; color: var(--soluk); }
+      .ses-ayari { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+      .ses-ayari span { font-size: 13px; color: var(--soluk); width: 44px; text-align: right; }
+      input[type='range'] { flex: 1; accent-color: var(--vurgu); }
+      #mikrofon.kapali { background: var(--kotu); color: #fff; }
+      .ipucu { font-size: 13px; color: var(--soluk); line-height: 1.5; margin: 6px 2px 0; }
+      .toast {
+        position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+        background: #000c; color: #fff; padding: 10px 16px; border-radius: 10px;
+        font-size: 14px; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+      }
+      .toast.acik { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>🎙️ Sesli Oda</h1>
+      <p class="alt">İki kişilik sesli sohbet. Oyunu açınca bu sekme arkada kalsın, konuşma devam eder.</p>
+
+      <!-- Giriş ekranı -->
+      <section id="giris">
+        <div class="kart">
+          <label for="isim">Adın</label>
+          <input id="isim" type="text" maxlength="20" placeholder="Örn. Karpuz" autocomplete="off">
+        </div>
+        <div class="kart">
+          <button id="oda-kur">Yeni oda kur</button>
+          <div class="ayrac">ya da arkadaşının kodunu yaz</div>
+          <div class="satir">
+            <input id="kod-girdi" type="text" maxlength="4" placeholder="KOD" autocomplete="off">
+            <button id="katil" class="ikincil">Katıl</button>
+          </div>
+        </div>
+        <p class="ipucu">Tarayıcı mikrofon izni isteyecek, "İzin ver" de. Kulaklık takarsan karşı taraf kendi sesini yankı olarak duymaz.</p>
+      </section>
+
+      <!-- Oda ekranı -->
+      <section id="oda" class="gizli">
+        <div class="kart oda-kodu">
+          <label>Oda kodu</label>
+          <div class="kod" id="kod-yazi">----</div>
+          <button id="kopyala" class="ikincil">Bağlantıyı kopyala</button>
+          <p class="durum" id="durum">Hazırlanıyor…</p>
+        </div>
+
+        <div class="kart">
+          <div class="kisi">
+            <div class="isik" id="isik-ben">🙂</div>
+            <div>
+              <div class="ad" id="ad-ben">Sen</div>
+              <div class="not" id="not-ben">Mikrofon açık</div>
+            </div>
+          </div>
+          <div class="kisi">
+            <div class="isik" id="isik-o">👤</div>
+            <div>
+              <div class="ad" id="ad-o">Arkadaşın</div>
+              <div class="not" id="not-o">Henüz gelmedi</div>
+            </div>
+          </div>
+          <div class="ses-ayari">
+            <label for="ses" style="margin:0">Onun sesi</label>
+            <input id="ses" type="range" min="0" max="100" value="100">
+            <span id="ses-yazi">%100</span>
+          </div>
+        </div>
+
+        <div class="satir" style="margin-bottom:14px">
+          <button id="mikrofon">🎙️ Mikrofonu kapat</button>
+        </div>
+        <button id="cik" class="tehlike">Odadan çık</button>
+      </section>
+    </main>
+
+    <div class="toast" id="toast"></div>
+    <audio id="uzak-ses" autoplay playsinline></audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script type="module">
+      import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+
+      // İki tarayıcının birbirini internette bulması için ücretsiz STUN sunucuları
+      // (STUN: "dışarıdan benim adresim ne görünüyor?" sorusunu cevaplayan sunucu).
+      const ICE_SUNUCULARI = [
+        { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+        { urls: 'stun:stun.cloudflare.com:3478' },
+      ];
+      const KOD_HARFLERI = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
+      const KONUSMA_ESIGI = 0.035;
+
+      const $ = (id) => document.getElementById(id);
+      const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const benimId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+      const d = {
+        kod: null,
+        isim: '',
+        kanal: null,
+        kanalHazir: false,
+        mikrofon: null, // MediaStream
+        pc: null, // RTCPeerConnection
+        karsiId: null,
+        karsiIsim: '',
+        bekleyenAdaylar: [],
+        teklifZamani: 0,
+        yenidenDenemeSaati: null,
+        sesBaglam: null,
+        olcerBen: null,
+        olcerO: null,
+        olcumSaati: null,
+        cikiyor: false,
+      };
+
+      // ---------- küçük yardımcılar ----------
+      function toast(yazi) {
+        const t = $('toast');
+        t.textContent = yazi;
+        t.classList.add('acik');
+        clearTimeout(toast.saat);
+        toast.saat = setTimeout(() => t.classList.remove('acik'), 2200);
+      }
+      function durumYaz(yazi, tur) {
+        const e = $('durum');
+        e.textContent = yazi;
+        e.className = 'durum' + (tur ? ' ' + tur : '');
+      }
+      function yeniKod() {
+        let k = '';
+        for (let i = 0; i < 4; i++) k += KOD_HARFLERI[Math.floor(Math.random() * KOD_HARFLERI.length)];
+        return k;
+      }
+      function guvenliOku(anahtar) {
+        try { return localStorage.getItem(anahtar) || ''; } catch { return ''; }
+      }
+      function guvenliYaz(anahtar, deger) {
+        try { localStorage.setItem(anahtar, deger); } catch {}
+      }
+
+      // ---------- giriş ----------
+      $('isim').value = guvenliOku('sesli-isim');
+      const urlKod = new URLSearchParams(location.search).get('oda');
+      if (urlKod) $('kod-girdi').value = urlKod.toUpperCase().slice(0, 4);
+
+      $('oda-kur').onclick = () => odayaGir(yeniKod());
+      $('katil').onclick = () => {
+        const k = $('kod-girdi').value.trim().toUpperCase();
+        if (k.length !== 4) { toast('Kod 4 harfli olmalı'); return; }
+        odayaGir(k);
+      };
+      $('kod-girdi').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('katil').click(); });
+
+      async function odayaGir(kod) {
+        d.isim = $('isim').value.trim() || 'Oyuncu';
+        guvenliYaz('sesli-isim', d.isim);
+        $('oda-kur').disabled = $('katil').disabled = true;
+        try {
+          d.mikrofon = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false,
+          });
+        } catch (hata) {
+          $('oda-kur').disabled = $('katil').disabled = false;
+          toast('Mikrofon izni verilmedi');
+          return;
+        }
+        d.kod = kod;
+        d.cikiyor = false;
+        history.replaceState(null, '', '?oda=' + kod);
+        $('kod-yazi').textContent = kod;
+        $('ad-ben').textContent = d.isim + ' (sen)';
+        $('giris').classList.add('gizli');
+        $('oda').classList.remove('gizli');
+        sesOlcumunuBaslat();
+        olcerBagla('ben', d.mikrofon);
+        kanalKur();
+      }
+
+      // ---------- Supabase kanalı (iki tarafın birbirini bulması) ----------
+      function kanalKur() {
+        durumYaz('Odaya bağlanılıyor…');
+        const kanal = db.channel('sesli-' + d.kod, {
+          config: { broadcast: { self: false, ack: false }, presence: { key: benimId } },
+        });
+        d.kanal = kanal;
+        kanal
+          .on('broadcast', { event: 'sinyal' }, ({ payload }) => {
+            if (d.kanal === kanal) sinyalGeldi(payload);
+          })
+          .on('presence', { event: 'sync' }, () => {
+            if (d.kanal === kanal) kimlerVar();
+          })
+          .subscribe(async (durum) => {
+            if (d.kanal !== kanal) return;
+            d.kanalHazir = durum === 'SUBSCRIBED';
+            if (durum === 'SUBSCRIBED') {
+              await kanal.track({ isim: d.isim, giris: Date.now() });
+              if (!d.karsiId) durumYaz('Arkadaşın bekleniyor. Kodu ona söyle ya da bağlantıyı gönder.');
+            } else if (durum === 'CHANNEL_ERROR' || durum === 'TIMED_OUT') {
+              durumYaz('Sunucuya bağlanılamadı, tekrar deneniyor…', 'kotu');
+            }
+          });
+      }
+
+      function gonder(tur, veri) {
+        if (!d.kanal || !d.kanalHazir || !d.karsiId) return;
+        const p = d.kanal.send({
+          type: 'broadcast',
+          event: 'sinyal',
+          payload: { kime: d.karsiId, kimden: benimId, isim: d.isim, tur, veri },
+        });
+        if (p && p.catch) p.catch(() => {});
+      }
+
+      // Odada kim var? İlk giren iki kişi konuşur, üçüncü kişiye "oda dolu" denir.
+      function kimlerVar() {
+        const hal = d.kanal.presenceState();
+        const kisiler = Object.entries(hal)
+          .map(([id, kayitlar]) => ({ id, isim: kayitlar[0]?.isim || 'Oyuncu', giris: kayitlar[0]?.giris || 0 }))
+          .sort((a, b) => a.giris - b.giris || (a.id < b.id ? -1 : 1));
+        const ilkIki = kisiler.slice(0, 2);
+        if (!ilkIki.some((k) => k.id === benimId) && kisiler.some((k) => k.id === benimId)) {
+          durumYaz('Bu oda dolu. İki kişiden fazlası giremez.', 'kotu');
+          baglantiyiKapat();
+          return;
+        }
+        const karsi = ilkIki.find((k) => k.id !== benimId);
+        if (!karsi) {
+          if (d.karsiId) {
+            toast((d.karsiIsim || 'Arkadaşın') + ' odadan çıktı');
+            baglantiyiKapat();
+          }
+          karsiYaz('Arkadaşın', 'Henüz gelmedi');
+          durumYaz('Arkadaşın bekleniyor. Kodu ona söyle ya da bağlantıyı gönder.');
+          return;
+        }
+        if (d.karsiId !== karsi.id) {
+          baglantiyiKapat();
+          d.karsiId = karsi.id;
+          d.karsiIsim = karsi.isim;
+          karsiYaz(karsi.isim, 'Bağlanıyor…');
+          baglantiKur();
+          // Kimliği küçük olan taraf teklifi yapar; böylece iki taraf aynı anda teklif yollamaz.
+          if (benimId < d.karsiId) teklifYap();
+        }
+      }
+
+      function karsiYaz(ad, not) {
+        $('ad-o').textContent = ad;
+        $('not-o').textContent = not;
+      }
+
+      // ---------- WebRTC (asıl ses bağlantısı) ----------
+      function baglantiKur() {
+        const pc = new RTCPeerConnection({ iceServers: ICE_SUNUCULARI });
+        d.pc = pc;
+        d.bekleyenAdaylar = [];
+        for (const iz of d.mikrofon.getAudioTracks()) pc.addTrack(iz, d.mikrofon);
+
+        pc.onicecandidate = (e) => {
+          if (d.pc === pc && e.candidate) gonder('aday', e.candidate.toJSON());
+        };
+        pc.ontrack = (e) => {
+          if (d.pc !== pc) return;
+          const akis = e.streams[0] || new MediaStream([e.track]);
+          const ses = $('uzak-ses');
+          ses.srcObject = akis;
+          ses.play().catch(() => toast('Sesi duymak için sayfaya bir kez tıkla'));
+          olcerBagla('o', akis);
+        };
+        pc.onconnectionstatechange = () => {
+          if (d.pc !== pc) return;
+          const h = pc.connectionState;
+          if (h === 'connected') {
+            clearTimeout(d.yenidenDenemeSaati);
+            durumYaz('Bağlandı. Konuşabilirsiniz.', 'iyi');
+            karsiYaz(d.karsiIsim, 'Bağlı');
+          } else if (h === 'connecting' || h === 'new') {
+            durumYaz('Bağlanıyor…');
+          } else if (h === 'disconnected') {
+            durumYaz('Bağlantı koptu, yeniden deneniyor…', 'kotu');
+            karsiYaz(d.karsiIsim, 'Bağlantı koptu');
+            clearTimeout(d.yenidenDenemeSaati);
+            d.yenidenDenemeSaati = setTimeout(() => {
+              if (d.pc === pc && pc.connectionState !== 'connected' && benimId < d.karsiId) teklifYap(true);
+            }, 4000);
+          } else if (h === 'failed') {
+            durumYaz('Doğrudan bağlantı kurulamadı. İkinizden biri sayfayı yenilesin.', 'kotu');
+            karsiYaz(d.karsiIsim, 'Bağlanamadı');
+            if (benimId < d.karsiId) teklifYap(true);
+          }
+        };
+        return pc;
+      }
+
+      async function teklifYap(yeniden) {
+        const pc = d.pc;
+        if (!pc) return;
+        try {
+          const teklif = await pc.createOffer(yeniden ? { iceRestart: true } : undefined);
+          if (d.pc !== pc) return;
+          await pc.setLocalDescription(teklif);
+          d.teklifZamani = Date.now();
+          gonder('teklif', pc.localDescription.toJSON());
+          // Karşı taraf kanala geç bağlandıysa teklifi kaçırmış olabilir: 5 sn'de cevap yoksa tekrar yolla.
+          setTimeout(() => {
+            if (d.pc === pc && pc.signalingState === 'have-local-offer') gonder('teklif', pc.localDescription.toJSON());
+          }, 5000);
+        } catch (hata) {
+          console.warn('teklif hatası', hata);
+        }
+      }
+
+      async function sinyalGeldi(m) {
+        if (!m || m.kime !== benimId) return;
+        // Karşı tarafı henüz listede görmeden mesajı geldiyse onu kabul et.
+        if (d.karsiId !== m.kimden) {
+          if (m.tur !== 'teklif') return;
+          baglantiyiKapat();
+          d.karsiId = m.kimden;
+          d.karsiIsim = m.isim || 'Arkadaşın';
+          karsiYaz(d.karsiIsim, 'Bağlanıyor…');
+          baglantiKur();
+        }
+        const pc = d.pc;
+        if (!pc) return;
+        try {
+          if (m.tur === 'teklif') {
+            if (pc.signalingState !== 'stable' && pc.signalingState !== 'have-remote-offer') return;
+            await pc.setRemoteDescription(m.veri);
+            await adaylariUygula(pc);
+            const cevap = await pc.createAnswer();
+            await pc.setLocalDescription(cevap);
+            gonder('cevap', pc.localDescription.toJSON());
+          } else if (m.tur === 'cevap') {
+            if (pc.signalingState !== 'have-local-offer') return;
+            await pc.setRemoteDescription(m.veri);
+            await adaylariUygula(pc);
+          } else if (m.tur === 'aday') {
+            if (pc.remoteDescription) await pc.addIceCandidate(m.veri).catch(() => {});
+            else d.bekleyenAdaylar.push(m.veri);
+          }
+        } catch (hata) {
+          console.warn('sinyal hatası', m.tur, hata);
+        }
+      }
+
+      async function adaylariUygula(pc) {
+        const liste = d.bekleyenAdaylar;
+        d.bekleyenAdaylar = [];
+        for (const a of liste) await pc.addIceCandidate(a).catch(() => {});
+      }
+
+      function baglantiyiKapat() {
+        clearTimeout(d.yenidenDenemeSaati);
+        if (d.pc) {
+          d.pc.onicecandidate = d.pc.ontrack = d.pc.onconnectionstatechange = null;
+          d.pc.close();
+        }
+        d.pc = null;
+        d.karsiId = null;
+        d.karsiIsim = '';
+        d.bekleyenAdaylar = [];
+        d.olcerO = null;
+        $('uzak-ses').srcObject = null;
+        $('isik-o').classList.remove('konusuyor');
+      }
+
+      // ---------- konuşma ışıkları ----------
+      function sesOlcumunuBaslat() {
+        if (!d.sesBaglam) d.sesBaglam = new (window.AudioContext || window.webkitAudioContext)();
+        d.sesBaglam.resume().catch(() => {});
+        clearInterval(d.olcumSaati);
+        d.olcumSaati = setInterval(() => {
+          isikGuncelle('isik-ben', d.olcerBen, mikrofonAcik());
+          isikGuncelle('isik-o', d.olcerO, true);
+        }, 100);
+      }
+      function olcerBagla(kim, akis) {
+        try {
+          const kaynak = d.sesBaglam.createMediaStreamSource(akis);
+          const olcer = d.sesBaglam.createAnalyser();
+          olcer.fftSize = 512;
+          kaynak.connect(olcer); // hoparlöre bağlanmaz, yalnız ölçülür
+          const olc = { olcer, tampon: new Float32Array(olcer.fftSize) };
+          if (kim === 'ben') d.olcerBen = olc; else d.olcerO = olc;
+        } catch {}
+      }
+      function isikGuncelle(id, olc, acik) {
+        const e = $(id);
+        if (!olc || !acik) { e.classList.remove('konusuyor'); return; }
+        olc.olcer.getFloatTimeDomainData(olc.tampon);
+        let t = 0;
+        for (const v of olc.tampon) t += v * v;
+        e.classList.toggle('konusuyor', Math.sqrt(t / olc.tampon.length) > KONUSMA_ESIGI);
+      }
+
+      // ---------- düğmeler ----------
+      function mikrofonAcik() {
+        const iz = d.mikrofon && d.mikrofon.getAudioTracks()[0];
+        return !!(iz && iz.enabled);
+      }
+      $('mikrofon').onclick = () => {
+        const iz = d.mikrofon && d.mikrofon.getAudioTracks()[0];
+        if (!iz) return;
+        iz.enabled = !iz.enabled;
+        const b = $('mikrofon');
+        b.classList.toggle('kapali', !iz.enabled);
+        b.textContent = iz.enabled ? '🎙️ Mikrofonu kapat' : '🔇 Mikrofon kapalı, açmak için bas';
+        $('not-ben').textContent = iz.enabled ? 'Mikrofon açık' : 'Mikrofon kapalı';
+        $('isik-ben').classList.toggle('sessiz', !iz.enabled);
+      };
+      $('ses').oninput = () => {
+        const v = Number($('ses').value);
+        $('uzak-ses').volume = v / 100;
+        $('ses-yazi').textContent = '%' + v;
+      };
+      $('kopyala').onclick = async () => {
+        const adres = location.origin + location.pathname + '?oda=' + d.kod;
+        try {
+          await navigator.clipboard.writeText(adres);
+          toast('Bağlantı kopyalandı, arkadaşına gönder');
+        } catch {
+          prompt('Bu bağlantıyı arkadaşına gönder:', adres);
+        }
+      };
+      $('cik').onclick = () => {
+        d.cikiyor = true;
+        baglantiyiKapat();
+        if (d.kanal) { d.kanal.untrack().catch(() => {}); db.removeChannel(d.kanal); }
+        d.kanal = null;
+        if (d.mikrofon) for (const iz of d.mikrofon.getTracks()) iz.stop();
+        d.mikrofon = null;
+        clearInterval(d.olcumSaati);
+        location.href = location.pathname;
+      };
+      // Sekme kapanırken odadan hemen düş, karşı taraf "çıktı" görsün
+      window.addEventListener('pagehide', () => {
+        if (d.kanal) d.kanal.untrack().catch(() => {});
+      });
+    </script>
+  </body>
+</html>
